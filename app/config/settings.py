@@ -43,16 +43,20 @@ class Settings(BaseSettings):
     
     @property
     def qdrant_url(self) -> str:
-        # Qdrant Cloud requer HTTPS
-        # Se o host contém "cloud.qdrant.io" ou "gcp.cloud.qdrant.io", usar HTTPS
-        if "cloud.qdrant.io" in self.qdrant_host or "qdrant.io" in self.qdrant_host:
-            # Se já tem protocolo, usar diretamente
+        # Qdrant Cloud requer HTTPS e NÃO usa porta na URL
+        # Se o host contém "cloud.qdrant.io" ou "gcp.cloud.qdrant.io", usar HTTPS sem porta
+        if "cloud.qdrant.io" in self.qdrant_host or "gcp.cloud.qdrant.io" in self.qdrant_host:
+            # Se já tem protocolo, remover porta se houver
             if self.qdrant_host.startswith(("http://", "https://")):
-                return self.qdrant_host
-            # Caso contrário, adicionar https://
-            return f"https://{self.qdrant_host}"
+                url = self.qdrant_host
+            else:
+                url = f"https://{self.qdrant_host}"
+            # Remover porta da URL (Qdrant Cloud não usa porta na URL)
+            if ":6333" in url:
+                url = url.replace(":6333", "")
+            return url
         
-        # Para Qdrant local, usar HTTP
+        # Para Qdrant local, usar HTTP com porta
         if self.qdrant_host.startswith(("http://", "https://")):
             return f"{self.qdrant_host}:{self.qdrant_port}"
         return f"http://{self.qdrant_host}:{self.qdrant_port}"

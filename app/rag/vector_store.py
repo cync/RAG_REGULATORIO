@@ -22,11 +22,22 @@ class VectorStore:
         # Configurar Qdrant com API key se disponível
         qdrant_kwargs = {
             "url": settings.qdrant_url,
-            "timeout": 30
+            "timeout": 30,
+            "check_compatibility": False  # Evitar warning de versão
         }
         
-        # Se tiver API key configurada, usar
-        qdrant_api_key = getattr(settings, 'qdrant_api_key', None) or settings.qdrant_api_key
+        # Qdrant Cloud sempre requer API key
+        qdrant_api_key = settings.qdrant_api_key or getattr(settings, 'qdrant_api_key', None)
+        if not qdrant_api_key and ("cloud.qdrant.io" in settings.qdrant_host or "gcp.cloud.qdrant.io" in settings.qdrant_host):
+            logger.warning(
+                "Qdrant Cloud detectado mas QDRANT_API_KEY não configurada",
+                host=settings.qdrant_host
+            )
+            raise ValueError(
+                "QDRANT_API_KEY é obrigatória para Qdrant Cloud. "
+                "Configure no arquivo .env ou variáveis de ambiente."
+            )
+        
         if qdrant_api_key:
             qdrant_kwargs["api_key"] = qdrant_api_key
         
