@@ -42,5 +42,9 @@ class Settings(BaseSettings):
     
     @property
     def qdrant_url(self) -> str:
+        # Se o host já contém protocolo, usar diretamente
+        if self.qdrant_host.startswith(("http://", "https://")):
+            return f"{self.qdrant_host}:{self.qdrant_port}"
+        # Caso contrário, adicionar http://
         return f"http://{self.qdrant_host}:{self.qdrant_port}"
 

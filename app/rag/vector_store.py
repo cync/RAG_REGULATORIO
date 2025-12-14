@@ -19,10 +19,18 @@ class VectorStore:
         if not settings.openai_api_key:
             raise ValueError("OPENAI_API_KEY não configurada. Configure a variável de ambiente.")
         
-        self.client = QdrantClient(
-            url=settings.qdrant_url,
-            timeout=30
-        )
+        # Configurar Qdrant com API key se disponível
+        qdrant_kwargs = {
+            "url": settings.qdrant_url,
+            "timeout": 30
+        }
+        
+        # Se tiver API key configurada, usar
+        qdrant_api_key = getattr(settings, 'qdrant_api_key', None)
+        if qdrant_api_key:
+            qdrant_kwargs["api_key"] = qdrant_api_key
+        
+        self.client = QdrantClient(**qdrant_kwargs)
         self.openai_client = OpenAI(api_key=settings.openai_api_key)
         self.embedding_model = settings.embedding_model
         self.settings = settings
