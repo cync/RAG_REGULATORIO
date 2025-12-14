@@ -54,9 +54,14 @@ def ingest_documents(domain: str, force_reindex: bool = False):
     
     total_chunks = 0
     
-    for file_path in files:
+    for i, file_path in enumerate(files, 1):
         try:
-            logger.info("Processando arquivo", file=str(file_path))
+            logger.info(
+                "Processando arquivo",
+                file=str(file_path),
+                progress=f"{i}/{len(files)}",
+                total_files=len(files)
+            )
             
             # Parse
             text, base_metadata = parser.parse(file_path, tema=domain)
@@ -64,7 +69,14 @@ def ingest_documents(domain: str, force_reindex: bool = False):
             # Chunking
             chunks = chunker.chunk(text, base_metadata)
             
-            # Indexar
+            logger.info(
+                "Chunks criados, iniciando indexação",
+                file=str(file_path),
+                chunks_count=len(chunks),
+                progress=f"{i}/{len(files)}"
+            )
+            
+            # Indexar (pode demorar devido a rate limits)
             vector_store.index_chunks(domain, chunks)
             
             total_chunks += len(chunks)
@@ -75,9 +87,12 @@ def ingest_documents(domain: str, force_reindex: bool = False):
                 file_path.rename(processed_file)
             
             logger.info(
-                "Arquivo processado",
+                "Arquivo processado com sucesso",
                 file=str(file_path),
-                chunks=len(chunks)
+                chunks=len(chunks),
+                total_chunks_so_far=total_chunks,
+                progress=f"{i}/{len(files)}",
+                remaining=len(files) - i
             )
             
         except Exception as e:
