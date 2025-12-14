@@ -43,28 +43,90 @@ def extract_document_links(html_content: str, base_url: str) -> list:
     """Extrai links de documentos (PDF, HTML) da página"""
     soup = BeautifulSoup(html_content, 'html.parser')
     links = []
+    seen_urls = set()
     
-    # Procurar por links de documentos
+    # Estratégia 1: Procurar por links diretos de PDF
     for link in soup.find_all('a', href=True):
         href = link.get('href', '')
         text = link.get_text(strip=True)
         
+        if not href or href.startswith('#'):
+            continue
+        
         # Links absolutos ou relativos
         full_url = urljoin(base_url, href)
         
-        # Verificar se é um documento
+        # Evitar duplicatas
+        if full_url in seen_urls:
+            continue
+        
+        # Verificar se é um documento PDF/HTML
         if any(ext in href.lower() for ext in ['.pdf', '.html', '.htm']):
+            seen_urls.add(full_url)
             links.append({
                 'url': full_url,
-                'text': text,
+                'text': text or os.path.basename(urlparse(full_url).path),
                 'filename': os.path.basename(urlparse(full_url).path) or f"documento_{len(links)}.pdf"
             })
+            continue
         
-        # Também procurar por links que contenham palavras-chave
-        if any(keyword in text.lower() for keyword in ['circular', 'resolução', 'comunicado', 'norma', 'instrução']):
+        # Estratégia 2: Procurar por links que contenham palavras-chave normativas
+        text_lower = text.lower()
+        if any(keyword in text_lower for keyword in ['circular', 'resolução', 'comunicado', 'norma', 'instrução', 'pix']):
+            if full_url not in seen_urls:
+                seen_urls.add(full_url)
+                # Tentar determinar extensão pela URL ou assumir PDF
+                filename = os.path.basename(urlparse(full_url).path)
+                if not filename or '.' not in filename:
+                    filename = f"{text[:50].replace('/', '_')}.pdf"
+                links.append({
+                    'url': full_url,
+                    'text': text,
+                    'filename': filename
+                })
+    
+    # Estratégia 3: Procurar por iframes ou objetos que possam conter PDFs
+    for iframe in soup.find_all(['iframe', 'embed', 'object']):
+        src = iframe.get('src') or iframe.get('data')
+        if src:
+            full_url = urljoin(base_url, src)
+            if '.pdf' in full_url.lower() and full_url not in seen_urls:
+                seen_urls.add(full_url)
+                links.append({
+                    'url': full_url,
+                    'text': 'Documento PDF',
+                    'filename': os.path.basename(urlparse(full_url).path) or "documento.pdf"
+                })
+    
+    # Estratégia 4: Procurar por padrões de URL do Bacen
+    # O Bacen geralmente usa padrões como: /estabilidadefinanceira/pix/arquivos/...
+    for link in soup.find_all('a', href=True):
+        href = link.get('href', '')
+        if '/arquivos/' in href or '/normas/' in href or '/pix/' in href:
+            full_url = urljoin(base_url, href)
+            if full_url not in seen_urls and ('.pdf' in href.lower() or 'download' in href.lower()):
+                seen_urls.add(full_url)
+                text = link.get_text(strip=True) or 'Documento'
+                links.append({
+                    'url': full_url,
+                    'text': text,
+                    'filename': os.path.basename(urlparse(full_url).path) or f"{text[:50]}.pdf"
+                })
+    
+    # Estratégia 5: Procurar por divs/seções que possam conter links
+    # Muitas vezes os links estão em estruturas específicas
+    for section in soup.find_all(['div', 'section', 'article'], class_=lambda x: x and any(
+        keyword in str(x).lower() for keyword in ['documento', 'norma', 'arquivo', 'download', 'pdf']
+    )):
+        for link in section.find_all('a', href=True):
+            href = link.get('href', '')
             if href and not href.startswith('#'):
                 full_url = urljoin(base_url, href)
-                if full_url not in [l['url'] for l in links]:
+                if full_url not in seen_urls and ('.pdf' in href.lower() or any(
+                    kw in link.get_text(strip=True).lower() for kw in ['circular', 'resolução', 'pdf']
+                )):
+                    seen_urls.add(full_url)
+                    text = link.get_text(strip=True) or 'Documento'
                     links.append({
                         'url': full_url,
                         'text': text,
@@ -93,9 +155,20 @@ def main():
         links = extract_document_links(response.text, BCB_PIX_URL)
         
         if not links:
-            print("⚠️  Nenhum link de documento encontrado na página.")
-            print("   Você pode baixar manualmente os PDFs e colocá-los em:")
-            print(f"   {OUTPUT_DIR}")
+            print("⚠️  Nenhum link de documento encontrado automaticamente na página.")
+            print()
+            print("Possíveis causas:")
+            print("  - A página carrega links via JavaScript (requer Selenium)")
+            print("  - Os links estão em formato diferente")
+            print()
+        print("Solução alternativa:")
+        print("  1. Acesse manualmente: https://www.bcb.gov.br/estabilidadefinanceira/pix-normas")
+        print("  2. Baixe os PDFs manualmente")
+        print(f"  3. Coloque em: {OUTPUT_DIR}")
+        print()
+        print("Ou tente usar o script com Selenium:")
+        print("  pip install selenium webdriver-manager")
+        print("  python scripts/download_pix_normas_selenium.py")
             return
         
         print(f"Encontrados {len(links)} documentos potenciais.")
