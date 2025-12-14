@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+import os
 import time
 from datetime import datetime
 from typing import Dict
@@ -20,7 +21,11 @@ app = FastAPI(
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",  # Desenvolvimento local
+        "https://*.vercel.app",   # Vercel (qualquer subdomínio)
+        os.getenv("FRONTEND_URL", ""),  # URL customizada do frontend
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
