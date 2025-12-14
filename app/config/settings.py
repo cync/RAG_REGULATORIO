@@ -52,8 +52,7 @@ class Settings(BaseSettings):
             else:
                 url = f"https://{self.qdrant_host}"
             # Remover porta da URL (Qdrant Cloud não usa porta na URL)
-            if ":6333" in url:
-                url = url.replace(":6333", "")
+            url = url.replace(":6333", "").replace(":6334", "")
             return url
         
         # Para Qdrant local, usar HTTP com porta
