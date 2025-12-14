@@ -5,7 +5,7 @@ import os
 
 class Settings(BaseSettings):
     # OpenAI
-    openai_api_key: str
+    openai_api_key: str = ""  # Será validado quando necessário
     
     # Qdrant
     qdrant_host: str = "localhost"

@@ -8,10 +8,15 @@ from app.config import get_settings
 
 def setup_logger():
     """Configura logger estruturado para auditoria"""
-    settings = get_settings()
+    try:
+        settings = get_settings()
+        log_level = settings.log_level
+    except Exception:
+        # Se não conseguir carregar settings, usa padrão
+        log_level = "INFO"
     
     # Criar diretório de logs
-    log_dir = Path(settings.logs_path)
+    log_dir = Path("logs")
     log_dir.mkdir(exist_ok=True)
     
     # Configurar structlog
@@ -37,7 +42,7 @@ def setup_logger():
     logging.basicConfig(
         format="%(message)s",
         stream=sys.stdout,
-        level=getattr(logging, settings.log_level.upper()),
+        level=getattr(logging, log_level.upper(), logging.INFO),
     )
     
     # File handler para auditoria

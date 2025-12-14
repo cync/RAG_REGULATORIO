@@ -37,6 +37,9 @@ class RegulatoryRAGEngine:
     
     def __init__(self):
         self.settings = get_settings()
+        if not self.settings.openai_api_key:
+            raise ValueError("OPENAI_API_KEY não configurada. Configure a variável de ambiente.")
+        
         self.vector_store = VectorStore()
         self.llm_client = OpenAI(api_key=self.settings.openai_api_key)
     

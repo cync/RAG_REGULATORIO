@@ -15,6 +15,9 @@ class VectorStore:
     
     def __init__(self):
         settings = get_settings()
+        if not settings.openai_api_key:
+            raise ValueError("OPENAI_API_KEY não configurada. Configure a variável de ambiente.")
+        
         self.client = QdrantClient(
             url=settings.qdrant_url,
             timeout=30
