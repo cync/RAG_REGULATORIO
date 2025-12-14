@@ -22,10 +22,14 @@ O frontend já está criado em `frontend/`. Ele é uma aplicação Next.js com:
    - Clique em "Import Project"
    - Selecione o repositório `cync/RAG_REGULATORIO`
 3. **Configure o projeto:**
-   - **Root Directory:** Selecione `frontend`
-   - **Framework Preset:** Next.js (detectado automaticamente)
+   - **Root Directory:** ⚠️ **IMPORTANTE:** Selecione `frontend` (não deixe em branco!)
+   - **Framework Preset:** Next.js (detectado automaticamente após selecionar root directory)
    - **Build Command:** `npm run build` (automático)
    - **Output Directory:** `.next` (automático)
+4. **Se não aparecer a opção de Root Directory:**
+   - Clique em "Configure Project" ou "Advanced"
+   - Procure por "Root Directory" ou "Root"
+   - Digite: `frontend`
 4. **Configure variáveis de ambiente:**
    - Clique em "Environment Variables"
    - Adicione:
