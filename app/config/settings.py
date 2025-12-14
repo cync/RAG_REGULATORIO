@@ -43,9 +43,17 @@ class Settings(BaseSettings):
     
     @property
     def qdrant_url(self) -> str:
-        # Se o host já contém protocolo, usar diretamente
+        # Qdrant Cloud requer HTTPS
+        # Se o host contém "cloud.qdrant.io" ou "gcp.cloud.qdrant.io", usar HTTPS
+        if "cloud.qdrant.io" in self.qdrant_host or "qdrant.io" in self.qdrant_host:
+            # Se já tem protocolo, usar diretamente
+            if self.qdrant_host.startswith(("http://", "https://")):
+                return self.qdrant_host
+            # Caso contrário, adicionar https://
+            return f"https://{self.qdrant_host}"
+        
+        # Para Qdrant local, usar HTTP
         if self.qdrant_host.startswith(("http://", "https://")):
             return f"{self.qdrant_host}:{self.qdrant_port}"
-        # Caso contrário, adicionar http://
         return f"http://{self.qdrant_host}:{self.qdrant_port}"
 

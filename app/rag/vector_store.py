@@ -26,9 +26,16 @@ class VectorStore:
         }
         
         # Se tiver API key configurada, usar
-        qdrant_api_key = getattr(settings, 'qdrant_api_key', None)
+        qdrant_api_key = getattr(settings, 'qdrant_api_key', None) or settings.qdrant_api_key
         if qdrant_api_key:
             qdrant_kwargs["api_key"] = qdrant_api_key
+        
+        logger.info(
+            "Configurando Qdrant",
+            url=settings.qdrant_url,
+            has_api_key=bool(qdrant_api_key),
+            host=settings.qdrant_host
+        )
         
         self.client = QdrantClient(**qdrant_kwargs)
         self.openai_client = OpenAI(api_key=settings.openai_api_key)
