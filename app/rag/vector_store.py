@@ -20,31 +20,47 @@ class VectorStore:
             raise ValueError("OPENAI_API_KEY não configurada. Configure a variável de ambiente.")
         
         # Configurar Qdrant com API key se disponível
-        qdrant_kwargs = {
-            "url": settings.qdrant_url,
-            "timeout": 30,
-            "check_compatibility": False  # Evitar warning de versão
-        }
+        is_cloud = "cloud.qdrant.io" in settings.qdrant_host or "gcp.cloud.qdrant.io" in settings.qdrant_host
         
         # Qdrant Cloud sempre requer API key
-        qdrant_api_key = settings.qdrant_api_key or getattr(settings, 'qdrant_api_key', None)
-        if not qdrant_api_key and ("cloud.qdrant.io" in settings.qdrant_host or "gcp.cloud.qdrant.io" in settings.qdrant_host):
-            logger.warning(
+        qdrant_api_key = settings.qdrant_api_key or getattr(settings, 'qdrant_api_key', None) or ""
+        qdrant_api_key = qdrant_api_key.strip() if qdrant_api_key else ""
+        
+        if is_cloud and not qdrant_api_key:
+            logger.error(
                 "Qdrant Cloud detectado mas QDRANT_API_KEY não configurada",
                 host=settings.qdrant_host
             )
             raise ValueError(
                 "QDRANT_API_KEY é obrigatória para Qdrant Cloud. "
-                "Configure no arquivo .env ou variáveis de ambiente."
+                "Configure no arquivo .env: QDRANT_API_KEY=sua-api-key"
             )
         
-        if qdrant_api_key:
-            qdrant_kwargs["api_key"] = qdrant_api_key
+        # Para Qdrant Cloud, usar URL sem porta
+        if is_cloud:
+            # Remover porta da URL se houver
+            qdrant_url = settings.qdrant_url.replace(":6333", "").replace(":6334", "")
+            qdrant_kwargs = {
+                "url": qdrant_url,
+                "api_key": qdrant_api_key,
+                "timeout": 30,
+                "check_compatibility": False
+            }
+        else:
+            # Qdrant local
+            qdrant_kwargs = {
+                "url": settings.qdrant_url,
+                "timeout": 30,
+                "check_compatibility": False
+            }
+            if qdrant_api_key:
+                qdrant_kwargs["api_key"] = qdrant_api_key
         
         logger.info(
             "Configurando Qdrant",
-            url=settings.qdrant_url,
+            url=qdrant_kwargs["url"],
             has_api_key=bool(qdrant_api_key),
+            is_cloud=is_cloud,
             host=settings.qdrant_host
         )
         
