@@ -4,11 +4,7 @@ uvicorn[standard]==0.24.0
 pydantic==2.5.0
 pydantic-settings==2.1.0
 
-# LlamaIndex
-llama-index==0.9.48
-llama-index-vector-stores-qdrant==0.1.5
-llama-index-embeddings-openai==0.1.6
-llama-index-llms-openai==0.1.7
+# LlamaIndex removido - usando OpenAI diretamente para evitar conflitos com Pydantic 2.x
 
 # Qdrant
 qdrant-client>=1.7.1

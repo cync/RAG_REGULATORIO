@@ -5,7 +5,7 @@ import uuid
 from app.models.schemas import DocumentChunk, Metadata
 from app.config import get_settings
 from app.utils.logger import get_logger
-from llama_index.embeddings.openai import OpenAIEmbedding
+from openai import OpenAI
 
 logger = get_logger(__name__)
 
@@ -63,8 +63,12 @@ class VectorStore:
         points = []
         
         for chunk in chunks:
-            # Gerar embedding
-            embedding = self.embedding_model.get_text_embedding(chunk.text)
+            # Gerar embedding usando OpenAI diretamente
+            response = self.openai_client.embeddings.create(
+                model=self.embedding_model,
+                input=chunk.text
+            )
+            embedding = response.data[0].embedding
             
             # Criar ponto
             point_id = str(uuid.uuid4())
