@@ -77,23 +77,39 @@ Lembre-se:
 """
     
     def _call_llm(self, prompt: str) -> str:
-        """Chama o LLM"""
-        try:
-            response = self.llm_client.chat.completions.create(
-                model=self.settings.llm_model,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=self.settings.max_tokens_response,
-                temperature=0.1,  # Baixa temperatura para respostas mais determinísticas
-            )
-            
-            return response.choices[0].message.content.strip()
-            
-        except Exception as e:
-            logger.error("Erro ao chamar LLM", error=str(e))
-            raise
+        """Chama o LLM com retry para rate limits"""
+        max_retries = 5
+        retry_delay = 1
+        
+        for attempt in range(max_retries):
+            try:
+                response = self.llm_client.chat.completions.create(
+                    model=self.settings.llm_model,
+                    messages=[
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": prompt}
+                    ],
+                    max_tokens=self.settings.max_tokens_response,
+                    temperature=0.1,  # Baixa temperatura para respostas mais determinísticas
+                )
+                
+                return response.choices[0].message.content.strip()
+                
+            except RateLimitError as e:
+                if attempt < max_retries - 1:
+                    wait_time = retry_delay * (2 ** attempt)  # Backoff exponencial
+                    logger.warning(
+                        "Rate limit no LLM, aguardando",
+                        attempt=attempt + 1,
+                        wait_seconds=wait_time
+                    )
+                    time.sleep(wait_time)
+                else:
+                    logger.error("Rate limit no LLM após múltiplas tentativas")
+                    raise
+            except Exception as e:
+                logger.error("Erro ao chamar LLM", error=str(e))
+                raise
     
     def query(
         self,
