@@ -15,7 +15,10 @@ logger = get_logger(__name__)
 app = FastAPI(
     title="Agente Regulatório - RAG Pix e Open Finance",
     description="Sistema RAG especializado em regulação do Banco Central do Brasil",
-    version="1.0.0"
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
 )
 
 # CORS - Permitir todas as origens (em produção, restringir conforme necessário)

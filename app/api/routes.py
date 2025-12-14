@@ -11,6 +11,24 @@ router = APIRouter()
 logger = get_logger(__name__)
 
 
+@router.get("/")
+async def root():
+    """Rota raiz - informações da API"""
+    return {
+        "name": "Agente Regulatório - RAG Pix e Open Finance",
+        "version": "1.0.0",
+        "description": "Sistema RAG especializado em regulação do Banco Central do Brasil",
+        "endpoints": {
+            "health": "/health",
+            "chat": "/chat",
+            "reindex": "/reindex",
+            "docs": "/docs",
+            "openapi": "/openapi.json"
+        },
+        "status": "running"
+    }
+
+
 def get_rag_engine() -> RegulatoryRAGEngine:
     """Dependency para RAG engine"""
     return RegulatoryRAGEngine()
