@@ -2,6 +2,13 @@
 Script para baixar automaticamente as normas do Pix do site do Banco Central.
 URL: https://www.bcb.gov.br/estabilidadefinanceira/pix-normas
 """
+import sys
+import io
+# Configurar encoding UTF-8 para Windows
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 import requests
 from bs4 import BeautifulSoup
 from pathlib import Path
@@ -33,10 +40,10 @@ def download_file(url: str, output_path: Path) -> bool:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
         
-        print(f"  ✓ Salvo: {output_path.name}")
+        print(f"  [OK] Salvo: {output_path.name}")
         return True
     except Exception as e:
-        print(f"  ✗ Erro ao baixar {url}: {e}")
+        print(f"  [ERRO] Erro ao baixar {url}: {e}")
         return False
 
 def extract_document_links(html_content: str, base_url: str) -> list:
@@ -155,7 +162,7 @@ def main():
         links = extract_document_links(response.text, BCB_PIX_URL)
         
         if not links:
-            print("⚠️  Nenhum link de documento encontrado automaticamente na página.")
+            print("[AVISO] Nenhum link de documento encontrado automaticamente na pagina.")
             print()
             print("Possíveis causas:")
             print("  - A página carrega links via JavaScript (requer Selenium)")
@@ -188,7 +195,7 @@ def main():
             
             # Não baixar se já existe
             if output_path.exists():
-                print(f"  ⊙ Já existe: {output_path.name}")
+                print(f"  [EXISTE] Ja existe: {output_path.name}")
                 continue
             
             if download_file(link_info['url'], output_path):
@@ -209,14 +216,14 @@ def main():
         print("=" * 60)
         
     except requests.exceptions.RequestException as e:
-        print(f"✗ Erro ao acessar a página: {e}")
+        print(f"[ERRO] Erro ao acessar a pagina: {e}")
         print()
         print("Solução alternativa:")
         print("1. Acesse manualmente: https://www.bcb.gov.br/estabilidadefinanceira/pix-normas")
         print("2. Baixe os PDFs manualmente")
         print(f"3. Coloque em: {OUTPUT_DIR}")
     except Exception as e:
-        print(f"✗ Erro: {e}")
+        print(f"[ERRO] Erro: {e}")
 
 if __name__ == "__main__":
     main()
