@@ -41,18 +41,23 @@ class VectorStore:
         
         # Para Qdrant Cloud, usar URL sem porta
         if is_cloud:
-            # Remover porta da URL se houver
+            # Remover porta da URL se houver e garantir formato correto
             qdrant_url = settings.qdrant_url.replace(":6333", "").replace(":6334", "")
-            # Garantir que não tenha porta
-            if ":" in qdrant_url.split("//")[1]:
-                parts = qdrant_url.split(":")
-                qdrant_url = ":".join(parts[:-1]) if len(parts) > 2 else qdrant_url
+            # Garantir que não tenha porta após o hostname
+            if "://" in qdrant_url:
+                protocol, rest = qdrant_url.split("://", 1)
+                if ":" in rest and not rest.split(":")[0].endswith(".io"):
+                    # Tem porta, remover
+                    hostname = rest.split(":")[0]
+                    qdrant_url = f"{protocol}://{hostname}"
             
+            # Para Qdrant Cloud, não passar porta explicitamente
             qdrant_kwargs = {
                 "url": qdrant_url,
                 "api_key": qdrant_api_key,
                 "timeout": 30,
-                "check_compatibility": False
+                "check_compatibility": False,
+                "prefer_grpc": False  # Usar HTTP para evitar problemas de porta
             }
         else:
             # Qdrant local
