@@ -32,8 +32,14 @@ data/raw/
 ```
 
 **Onde obter documentos:**
+
+**Pix:**
+- Todas as normas do Pix: https://www.bcb.gov.br/estabilidadefinanceira/pix-normas
+- Use o script automático: `python scripts/download_pix_normas.py`
+
+**Open Finance:**
 - Site do Banco Central: https://www.bcb.gov.br
-- Buscar por "Pix" ou "Open Finance"
+- Buscar por "Open Finance"
 - Baixar PDFs das normas, circulares, resoluções
 
 #### Passo 2: Fazer Upload dos Documentos
@@ -90,11 +96,29 @@ pip install -r requirements.txt
 # QDRANT_API_KEY=sua-api-key
 ```
 
-#### Passo 2: Colocar Documentos
+#### Passo 2: Baixar Documentos
 
-Coloque seus PDFs/HTMLs em:
-- `data/raw/pix/` para documentos do Pix
-- `data/raw/open_finance/` para documentos do Open Finance
+**Opção A: Download Automático (Pix) - Recomendado**
+
+```bash
+# Baixar automaticamente as normas do Pix
+python scripts/download_pix_normas.py
+```
+
+Este script:
+- Acessa: https://www.bcb.gov.br/estabilidadefinanceira/pix-normas
+- Baixa todos os PDFs disponíveis
+- Salva em `data/raw/pix/`
+
+**Opção B: Download Manual**
+
+1. **Pix:** Acesse https://www.bcb.gov.br/estabilidadefinanceira/pix-normas
+2. Baixe os PDFs manualmente
+3. Coloque em `data/raw/pix/`
+
+4. **Open Finance:** Busque no site do Bacen
+5. Baixe os PDFs
+6. Coloque em `data/raw/open_finance/`
 
 **Dica:** Organize os arquivos com nomes descritivos:
 - `pix_circular_123_2023.pdf`
