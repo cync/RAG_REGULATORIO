@@ -19,10 +19,8 @@ class VectorStore:
             url=settings.qdrant_url,
             timeout=30
         )
-        self.embedding_model = OpenAIEmbedding(
-            model=settings.embedding_model,
-            api_key=settings.openai_api_key
-        )
+        self.openai_client = OpenAI(api_key=settings.openai_api_key)
+        self.embedding_model = settings.embedding_model
         self.settings = settings
     
     def ensure_collection(self, collection_name: str):
@@ -110,8 +108,12 @@ class VectorStore:
     ) -> List[DocumentChunk]:
         """Busca semântica na coleção"""
         try:
-            # Gerar embedding da query
-            query_embedding = self.embedding_model.get_text_embedding(query)
+            # Gerar embedding da query usando OpenAI diretamente
+            response = self.openai_client.embeddings.create(
+                model=self.embedding_model,
+                input=query
+            )
+            query_embedding = response.data[0].embedding
             
             # Buscar
             results = self.client.search(
