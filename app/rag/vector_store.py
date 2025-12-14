@@ -26,20 +26,28 @@ class VectorStore:
         qdrant_api_key = settings.qdrant_api_key or getattr(settings, 'qdrant_api_key', None) or ""
         qdrant_api_key = qdrant_api_key.strip() if qdrant_api_key else ""
         
-        if is_cloud and not qdrant_api_key:
-            logger.error(
-                "Qdrant Cloud detectado mas QDRANT_API_KEY não configurada",
-                host=settings.qdrant_host
-            )
-            raise ValueError(
-                "QDRANT_API_KEY é obrigatória para Qdrant Cloud. "
-                "Configure no arquivo .env: QDRANT_API_KEY=sua-api-key"
-            )
+        # Validar API key para Qdrant Cloud
+        if is_cloud:
+            if not qdrant_api_key or len(qdrant_api_key) < 10:
+                logger.error(
+                    "Qdrant Cloud detectado mas QDRANT_API_KEY inválida ou vazia",
+                    host=settings.qdrant_host,
+                    api_key_length=len(qdrant_api_key) if qdrant_api_key else 0
+                )
+                raise ValueError(
+                    "QDRANT_API_KEY é obrigatória e deve ser válida para Qdrant Cloud. "
+                    "Configure no arquivo .env: QDRANT_API_KEY=sua-api-key-completa"
+                )
         
         # Para Qdrant Cloud, usar URL sem porta
         if is_cloud:
             # Remover porta da URL se houver
             qdrant_url = settings.qdrant_url.replace(":6333", "").replace(":6334", "")
+            # Garantir que não tenha porta
+            if ":" in qdrant_url.split("//")[1]:
+                parts = qdrant_url.split(":")
+                qdrant_url = ":".join(parts[:-1]) if len(parts) > 2 else qdrant_url
+            
             qdrant_kwargs = {
                 "url": qdrant_url,
                 "api_key": qdrant_api_key,
@@ -59,12 +67,30 @@ class VectorStore:
         logger.info(
             "Configurando Qdrant",
             url=qdrant_kwargs["url"],
-            has_api_key=bool(qdrant_api_key),
+            has_api_key=bool(qdrant_api_key and len(qdrant_api_key) > 10),
+            api_key_length=len(qdrant_api_key) if qdrant_api_key else 0,
             is_cloud=is_cloud,
             host=settings.qdrant_host
         )
         
         self.client = QdrantClient(**qdrant_kwargs)
+        
+        # Testar conexão se for Cloud
+        if is_cloud:
+            try:
+                # Tentar uma operação simples para validar autenticação
+                self.client.get_collections()
+                logger.info("Conexão com Qdrant Cloud validada com sucesso")
+            except Exception as e:
+                logger.error(
+                    "Erro ao validar conexão com Qdrant Cloud",
+                    error=str(e),
+                    url=qdrant_url
+                )
+                raise ValueError(
+                    f"Falha na autenticação com Qdrant Cloud: {str(e)}\n"
+                    "Verifique se QDRANT_API_KEY está correta no arquivo .env"
+                )
         self.openai_client = OpenAI(api_key=settings.openai_api_key)
         self.embedding_model = settings.embedding_model
         self.settings = settings
