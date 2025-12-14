@@ -1,5 +1,6 @@
 from typing import List, Optional, Dict, Any
-from openai import OpenAI
+import time
+from openai import OpenAI, RateLimitError
 from app.rag.vector_store import VectorStore
 from app.models.schemas import DocumentChunk
 from app.config import get_settings

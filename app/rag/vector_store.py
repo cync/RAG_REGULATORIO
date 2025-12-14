@@ -2,10 +2,11 @@ from typing import List, Optional
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
 import uuid
+import time
 from app.models.schemas import DocumentChunk, Metadata
 from app.config import get_settings
 from app.utils.logger import get_logger
-from openai import OpenAI
+from openai import OpenAI, RateLimitError
 
 logger = get_logger(__name__)
 
@@ -63,13 +64,39 @@ class VectorStore:
         
         points = []
         
-        for chunk in chunks:
-            # Gerar embedding usando OpenAI diretamente
-            response = self.openai_client.embeddings.create(
-                model=self.embedding_model,
-                input=chunk.text
-            )
-            embedding = response.data[0].embedding
+        for i, chunk in enumerate(chunks):
+            # Gerar embedding usando OpenAI diretamente com retry
+            max_retries = 5
+            retry_delay = 1
+            
+            for attempt in range(max_retries):
+                try:
+                    response = self.openai_client.embeddings.create(
+                        model=self.embedding_model,
+                        input=chunk.text
+                    )
+                    embedding = response.data[0].embedding
+                    break
+                except RateLimitError as e:
+                    if attempt < max_retries - 1:
+                        wait_time = retry_delay * (2 ** attempt)  # Backoff exponencial
+                        logger.warning(
+                            "Rate limit atingido, aguardando",
+                            attempt=attempt + 1,
+                            wait_seconds=wait_time,
+                            chunk_index=i
+                        )
+                        time.sleep(wait_time)
+                    else:
+                        logger.error("Rate limit após múltiplas tentativas", chunk_index=i)
+                        raise
+                except Exception as e:
+                    logger.error("Erro ao gerar embedding", error=str(e), chunk_index=i)
+                    raise
+            
+            # Pequeno delay entre requisições para evitar rate limit
+            if i < len(chunks) - 1:
+                time.sleep(0.1)  # 100ms entre requisições
             
             # Criar ponto
             point_id = str(uuid.uuid4())
@@ -111,12 +138,33 @@ class VectorStore:
     ) -> List[DocumentChunk]:
         """Busca semântica na coleção"""
         try:
-            # Gerar embedding da query usando OpenAI diretamente
-            response = self.openai_client.embeddings.create(
-                model=self.embedding_model,
-                input=query
-            )
-            query_embedding = response.data[0].embedding
+            # Gerar embedding da query usando OpenAI diretamente com retry
+            max_retries = 5
+            retry_delay = 1
+            
+            for attempt in range(max_retries):
+                try:
+                    response = self.openai_client.embeddings.create(
+                        model=self.embedding_model,
+                        input=query
+                    )
+                    query_embedding = response.data[0].embedding
+                    break
+                except RateLimitError as e:
+                    if attempt < max_retries - 1:
+                        wait_time = retry_delay * (2 ** attempt)  # Backoff exponencial
+                        logger.warning(
+                            "Rate limit na busca, aguardando",
+                            attempt=attempt + 1,
+                            wait_seconds=wait_time
+                        )
+                        time.sleep(wait_time)
+                    else:
+                        logger.error("Rate limit após múltiplas tentativas na busca")
+                        raise
+                except Exception as e:
+                    logger.error("Erro ao gerar embedding da query", error=str(e))
+                    raise
             
             # Buscar
             results = self.client.search(
