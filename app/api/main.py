@@ -18,14 +18,11 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS
+# CORS - Permitir todas as origens (em produção, restringir conforme necessário)
+# Para Vercel, aceita qualquer subdomínio .vercel.app
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",  # Desenvolvimento local
-        "https://*.vercel.app",   # Vercel (qualquer subdomínio)
-        os.getenv("FRONTEND_URL", ""),  # URL customizada do frontend
-    ],
+    allow_origins=["*"],  # Em produção, pode restringir para domínios específicos
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
