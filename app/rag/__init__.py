@@ -1,0 +1,2 @@
+# Camada RAG core
+

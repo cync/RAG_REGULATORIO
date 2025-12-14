@@ -1,0 +1,36 @@
+# FastAPI e servidor
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# LlamaIndex
+llama-index==0.9.48
+llama-index-vector-stores-qdrant==0.1.5
+llama-index-embeddings-openai==0.1.6
+llama-index-llms-openai==0.1.7
+
+# Qdrant
+qdrant-client==1.7.0
+
+# Processamento de documentos
+pypdf==3.17.4
+beautifulsoup4==4.12.2
+lxml==4.9.3
+html2text==2020.1.16
+
+# OpenAI
+openai==1.6.1
+
+# Utilitários
+python-dotenv==1.0.0
+python-multipart==0.0.6
+httpx==0.25.2
+tiktoken==0.5.2
+
+# Logs
+structlog==23.2.0
+
+# Validação e parsing
+regex==2023.12.25
+
