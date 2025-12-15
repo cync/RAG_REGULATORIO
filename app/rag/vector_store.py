@@ -285,7 +285,7 @@ class VectorStore:
             info = self.client.get_collection(collection_name)
             return {
                 "points_count": info.points_count,
-                "vectors_count": info.vectors_count,
+                "vectors_count": getattr(info, 'vectors_count', info.points_count),  # Fallback se não existir
             }
         except Exception as e:
             logger.warning("Erro ao obter info da coleção", collection=collection_name, error=str(e))
