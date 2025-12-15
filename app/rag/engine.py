@@ -191,9 +191,11 @@ IMPORTANTE: Sua resposta DEVE conter pelo menos uma citação no formato "Art. X
                 citations = list(set(citations))
             
             # Retornar resposta mesmo sem validação, mas marcar como sem contexto suficiente
+            # Converter sources para dict para compatibilidade com ChatResponse
+            sources_dict = [s.metadata.model_dump() for s in sources]
             return {
                 "answer": answer if answer else "Não há base normativa explícita nos documentos analisados para responder a esta pergunta.",
-                "sources": [s.metadata.model_dump() for s in sources],
+                "sources": sources_dict,
                 "citations": citations,
                 "has_sufficient_context": len(sources) > 0,  # Tem contexto se tem sources
             }

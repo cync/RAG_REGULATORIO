@@ -33,7 +33,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     """Response do endpoint de chat"""
     answer: str
-    sources: List[DocumentChunk] = Field(default_factory=list)
+    sources: List[Dict[str, Any]] = Field(default_factory=list)  # Lista de dicts (metadados)
     citations: List[str] = Field(default_factory=list)
     has_sufficient_context: bool
     timestamp: datetime = Field(default_factory=datetime.now)
