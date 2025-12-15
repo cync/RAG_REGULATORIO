@@ -53,39 +53,61 @@ class RegulatoryRAGEngine:
         context_parts = []
         
         for i, chunk in enumerate(chunks, 1):
+            # Construir referência normativa completa
+            norma_ref = f"{chunk.metadata.norma} {chunk.metadata.numero_norma}/{chunk.metadata.ano}"
+            artigo_ref = f"Art. {chunk.metadata.artigo}" if chunk.metadata.artigo else "Sem artigo específico"
+            
             context_parts.append(
                 f"[Documento {i}]\n"
-                f"Norma: {chunk.metadata.norma} {chunk.metadata.numero_norma}/{chunk.metadata.ano}\n"
-                f"Artigo: {chunk.metadata.artigo or 'N/A'}\n"
+                f"Referência Normativa: {norma_ref}, {artigo_ref}\n"
                 f"Tema: {chunk.metadata.tema}\n"
                 f"Conteúdo:\n{chunk.text}\n"
             )
         
-        return "\n---\n\n".join(context_parts)
+        context_str = "\n---\n\n".join(context_parts)
+        
+        # Log do contexto para debug (primeiros 500 chars)
+        logger.debug(
+            "Contexto construído para LLM",
+            context_length=len(context_str),
+            chunks_count=len(chunks),
+            context_preview=context_str[:500]
+        )
+        
+        return context_str
     
     def _build_prompt(self, question: str, context: str) -> str:
         """Constrói prompt completo"""
-        return f"""Com base nos seguintes trechos normativos, responda à pergunta.
+        return f"""Você é um especialista em regulação do Banco Central do Brasil.
 
-Trechos normativos:
+TRECHOS NORMATIVOS FORNECIDOS:
 
 {context}
 
-Pergunta: {question}
+PERGUNTA DO USUÁRIO: {question}
 
 INSTRUÇÕES OBRIGATÓRIAS:
-1. Responda APENAS com base nos trechos fornecidos acima
-2. SEMPRE cite o ARTIGO usando "Art. X" ou "Artigo X" na sua resposta
-3. SEMPRE cite a NORMA (ex: "Instrução Normativa X", "Resolução X")
-4. SEMPRE cite o ANO
-5. Use o formato: "Conforme Art. X da Norma Y/Ano"
-6. Se não houver base normativa nos trechos, diga explicitamente: "Não há base normativa explícita nos documentos analisados."
-7. Não faça inferências ou interpretações jurídicas
+
+1. ANALISE os trechos normativos acima. Eles contêm informações sobre a pergunta.
+
+2. SE encontrar informação relevante nos trechos:
+   - Responda a pergunta usando as informações dos trechos
+   - SEMPRE cite: "Art. X" ou "Artigo X" da norma mencionada
+   - SEMPRE mencione a norma (ex: "Instrução Normativa X", "Resolução X")
+   - SEMPRE mencione o ano
+   - Formato: "Conforme Art. X da Instrução Normativa Y/Ano, [resposta]"
+
+3. SE NÃO encontrar informação relevante:
+   - Diga: "Não há base normativa explícita nos documentos analisados para responder a esta pergunta."
+
+4. NÃO invente informações. Use APENAS o que está nos trechos fornecidos.
+
+5. Sua resposta DEVE conter pelo menos uma citação no formato "Art. X" ou "Artigo X" se houver informação relevante.
 
 EXEMPLO DE RESPOSTA CORRETA:
-"Conforme Art. 5 da Instrução Normativa 1/2020, os PSPs têm a obrigação de..."
+"Conforme Art. 5 da Instrução Normativa 1/2020, os PSPs têm a obrigação de implementar sistemas de segurança..."
 
-IMPORTANTE: Sua resposta DEVE conter pelo menos uma citação no formato "Art. X" ou "Artigo X" para ser válida.
+IMPORTANTE: Os trechos acima contêm informações normativas. Analise-os cuidadosamente antes de responder.
 """
     
     def _call_llm(self, prompt: str) -> str:
