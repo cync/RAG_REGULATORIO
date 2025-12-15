@@ -254,19 +254,46 @@ class VectorStore:
             query_embedding = self._get_embedding_with_retry(query)
             
             # Buscar usando a API correta do QdrantClient
-            from qdrant_client.models import Filter, FieldCondition, MatchValue
-            
-            results = self.client.query_points(
-                collection_name=collection_name,
-                query=query_embedding,
-                limit=top_k,
-                score_threshold=min_score
-            )
+            # A API correta é search() mas pode variar por versão
+            # Tentar primeiro com search, se falhar, usar query_points
+            try:
+                results = self.client.search(
+                    collection_name=collection_name,
+                    query_vector=query_embedding,
+                    limit=top_k,
+                    score_threshold=min_score
+                )
+            except AttributeError:
+                # Se search não existir, usar query_points (API mais nova)
+                from qdrant_client.models import Query, Vector
+                query_result = self.client.query_points(
+                    collection_name=collection_name,
+                    query=Query(
+                        vector=Vector(
+                            vector=query_embedding,
+                            name=""
+                        )
+                    ),
+                    limit=top_k,
+                    score_threshold=min_score
+                )
+                # query_points retorna um objeto com .points
+                results = query_result.points if hasattr(query_result, 'points') else query_result
             
             # Converter para DocumentChunk
             chunks = []
             for result in results:
-                payload = result.payload
+                # Result pode ser ScoredPoint ou dict
+                if hasattr(result, 'payload'):
+                    payload = result.payload
+                    point_id = result.id
+                    score = result.score
+                else:
+                    # Se for dict
+                    payload = result.get('payload', {})
+                    point_id = result.get('id')
+                    score = result.get('score', 0.0)
+                
                 chunk = DocumentChunk(
                     text=payload.get("text", ""),
                     metadata=Metadata(
@@ -278,8 +305,8 @@ class VectorStore:
                         tema=payload.get("tema", ""),
                         url=payload.get("url"),
                     ),
-                    chunk_id=str(result.id),
-                    score=result.score
+                    chunk_id=str(point_id),
+                    score=score
                 )
                 chunks.append(chunk)
             
