@@ -25,36 +25,69 @@ class DocumentParser:
             with open(file_path, "rb") as f:
                 pdf_reader = pypdf.PdfReader(f)
                 total_pages = len(pdf_reader.pages)
+                
+                pages_with_text = 0
+                pages_without_text = 0
+                
                 for page_num, page in enumerate(pdf_reader.pages, 1):
                     page_text = page.extract_text()
-                    text += page_text + "\n"
                     
-                    # Log da primeira página para debug
-                    if page_num == 1:
-                        logger.debug(
-                            "Primeira página extraída",
-                            file=str(file_path),
-                            page_text_length=len(page_text),
-                            page_text_preview=page_text[:200] if page_text else ""
-                        )
+                    # Remover apenas quebras de linha excessivas, mas manter conteúdo
+                    # Se a página só tem quebras de linha, considerar vazia
+                    page_text_clean = page_text.strip() if page_text else ""
+                    
+                    if page_text_clean and len(page_text_clean.replace('\n', '').replace(' ', '')) > 10:
+                        # Página tem conteúdo real (mais de 10 caracteres não-whitespace)
+                        text += page_text + "\n"
+                        pages_with_text += 1
+                        
+                        # Log da primeira página com conteúdo para debug
+                        if pages_with_text == 1:
+                            logger.debug(
+                                "Primeira página com conteúdo extraída",
+                                file=str(file_path),
+                                page_num=page_num,
+                                page_text_length=len(page_text),
+                                page_text_preview=page_text[:300] if page_text else ""
+                            )
+                    else:
+                        # Página só tem whitespace
+                        pages_without_text += 1
+                        if page_num <= 3:  # Log apenas das primeiras páginas vazias
+                            logger.debug(
+                                "Página sem conteúdo real (apenas whitespace)",
+                                file=str(file_path),
+                                page_num=page_num,
+                                page_text_length=len(page_text) if page_text else 0
+                            )
             
             text = text.strip()
             
-            # Validar que o texto não está vazio
-            if not text or len(text) < 50:
-                logger.warning(
-                    "PDF extraído com texto vazio ou muito curto",
+            # Validar que o texto não está vazio ou só tem whitespace
+            text_non_whitespace = text.replace('\n', '').replace(' ', '').replace('\t', '').strip()
+            
+            if not text or len(text_non_whitespace) < 50:
+                logger.error(
+                    "PDF extraído com texto vazio ou muito curto (apenas whitespace)",
                     file=str(file_path),
                     text_length=len(text),
+                    text_non_whitespace_length=len(text_non_whitespace),
                     total_pages=total_pages,
-                    preview=text[:200] if text else ""
+                    pages_with_text=pages_with_text,
+                    pages_without_text=pages_without_text,
+                    preview=text[:300] if text else ""
                 )
+                # Retornar string vazia para que o arquivo seja ignorado
+                return ""
             
             logger.info(
-                "PDF parseado",
+                "PDF parseado com sucesso",
                 file=str(file_path),
                 text_length=len(text),
-                total_pages=total_pages
+                text_non_whitespace_length=len(text_non_whitespace),
+                total_pages=total_pages,
+                pages_with_text=pages_with_text,
+                pages_without_text=pages_without_text
             )
             
             return text

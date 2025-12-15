@@ -66,6 +66,19 @@ def ingest_documents(domain: str, force_reindex: bool = False):
             # Parse
             text, base_metadata = parser.parse(file_path, tema=domain)
             
+            # Validar que o texto extraído não está vazio
+            if not text or len(text.strip().replace('\n', '').replace(' ', '')) < 50:
+                logger.warning(
+                    "Arquivo ignorado - texto extraído está vazio ou muito curto",
+                    file=str(file_path),
+                    text_length=len(text) if text else 0,
+                    text_preview=text[:200] if text else ""
+                )
+                # Mover arquivo para processed mesmo assim para não reprocessar
+                processed_file = processed_path / file_path.name
+                file_path.rename(processed_file)
+                continue
+            
             # Chunking
             chunks = chunker.chunk(text, base_metadata)
             
