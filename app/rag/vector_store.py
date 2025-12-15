@@ -254,18 +254,27 @@ class VectorStore:
             query_embedding = self._get_embedding_with_retry(query)
             
             # Buscar usando query_points() - método atual do qdrant-client >= 1.7
-            from qdrant_client.models import Query, NamedVector
-            
-            # Usar NamedVector para especificar o vetor
-            query_result = self.client.query_points(
-                collection_name=collection_name,
-                query=NamedVector(
-                    name="",  # Nome vazio para vetor padrão
-                    vector=query_embedding
-                ),
-                limit=top_k,
-                score_threshold=min_score
-            )
+            # Para coleções simples (sem named vectors), usar lista diretamente
+            try:
+                # Tentar primeiro com lista direta (mais simples)
+                query_result = self.client.query_points(
+                    collection_name=collection_name,
+                    query=query_embedding,  # Lista de floats diretamente
+                    limit=top_k,
+                    score_threshold=min_score
+                )
+            except (TypeError, ValueError):
+                # Se não funcionar, tentar com NamedVector
+                from qdrant_client.models import NamedVector
+                query_result = self.client.query_points(
+                    collection_name=collection_name,
+                    query=NamedVector(
+                        name="",  # Nome vazio para vetor padrão
+                        vector=query_embedding
+                    ),
+                    limit=top_k,
+                    score_threshold=min_score
+                )
             
             # query_points retorna um objeto QueryResponse com .points
             results = query_result.points if hasattr(query_result, 'points') else []
