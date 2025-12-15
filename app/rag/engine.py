@@ -215,7 +215,37 @@ RESPONDA AGORA:
         
         # 3. Construir contexto e prompt
         context = self._build_context(sources)
+        
+        # Se não há contexto válido após filtrar chunks vazios, retornar erro
+        if not context or len(context.strip()) < 50:
+            logger.warning(
+                "Contexto vazio após filtrar chunks",
+                original_sources_count=len(sources),
+                question=question[:100]
+            )
+            return {
+                "answer": "Não há base normativa explícita nos documentos analisados para responder a esta pergunta.",
+                "sources": [],
+                "citations": [],
+                "has_sufficient_context": False,
+            }
+        
         prompt = self._build_prompt(question, context)
+        
+        # Log detalhado para debug
+        logger.info(
+            "Contexto construído para LLM",
+            context_length=len(context),
+            context_preview=context[:500],
+            sources_count=len(sources),
+            valid_sources_count=len([s for s in sources if s.text and len(s.text.strip()) >= 10]),
+            sources_preview=[{
+                "norma": s.metadata.norma,
+                "artigo": s.metadata.artigo,
+                "text_length": len(s.text) if s.text else 0,
+                "text_preview": s.text[:200] if s.text else ""
+            } for s in sources[:3]]
+        )
         
         # Log detalhado para debug
         logger.info(
