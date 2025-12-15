@@ -70,6 +70,14 @@ class RegulatoryRAGEngine:
     
     def _build_prompt(self, question: str, context: str) -> str:
         """Constrói prompt completo"""
+        if not context or len(context.strip()) < 50:
+            return f"""PERGUNTA: {question}
+
+AVISO: Não foi possível encontrar trechos normativos relevantes para esta pergunta.
+
+Resposta: "Não há base normativa explícita nos documentos analisados para responder a esta pergunta."
+"""
+        
         return f"""TRECHOS NORMATIVOS ENCONTRADOS (USE ESTAS INFORMAÇÕES PARA RESPONDER):
 
 {context}
@@ -83,10 +91,10 @@ INSTRUÇÕES OBRIGATÓRIAS:
 3. EXTRAIA informações dos trechos e responda a pergunta usando essas informações.
 
 4. FORMATO OBRIGATÓRIO DA RESPOSTA:
-   - SEMPRE comece com: "Conforme Art. [NÚMERO] da [NORMA] [NÚMERO]/[ANO]"
+   - SEMPRE comece com uma citação: "Conforme [referência do documento]" ou "De acordo com [referência do documento]"
+   - Se o documento mencionar um artigo, cite: "Art. X" ou "Artigo X"
    - Use as informações do trecho para responder
-   - Cite o artigo usando "Art. X" ou "Artigo X"
-   - Mencione a norma completa e o ano
+   - Mencione a norma e o ano quando disponíveis
 
 5. EXEMPLO DE RESPOSTA CORRETA:
    "Conforme Art. 5 da Instrução Normativa 1/2020, os PSPs têm a obrigação de implementar sistemas de segurança adequados para operações no Pix, conforme estabelecido no trecho acima."
@@ -96,11 +104,12 @@ INSTRUÇÕES OBRIGATÓRIAS:
    - Eles CONTÊM informações sobre a pergunta
    - USE as informações dos trechos para responder
    - NÃO diga que não há base normativa sem analisar cuidadosamente todos os trechos primeiro
+   - Se o trecho não mencionar um artigo específico, use a referência do documento (norma/ano)
 
 7. Se REALMENTE não conseguir extrair informação relevante dos trechos (após analisar todos), diga:
    "Não há base normativa explícita nos documentos analisados para responder a esta pergunta."
 
-Sua resposta DEVE começar com uma citação no formato "Conforme Art. X da [Norma] Y/Ano" se houver qualquer informação relevante nos trechos.
+Sua resposta DEVE usar informações dos trechos fornecidos. Analise o CONTEÚDO de cada trecho, não apenas os metadados.
 
 RESPONDA AGORA:
 """
