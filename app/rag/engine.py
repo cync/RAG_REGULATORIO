@@ -80,34 +80,40 @@ class RegulatoryRAGEngine:
         """Constrói prompt completo"""
         return f"""Você é um especialista em regulação do Banco Central do Brasil.
 
-TRECHOS NORMATIVOS FORNECIDOS:
+TRECHOS NORMATIVOS FORNECIDOS (ANALISE ESTES TRECHOS):
 
 {context}
 
 PERGUNTA DO USUÁRIO: {question}
 
-INSTRUÇÕES OBRIGATÓRIAS:
+INSTRUÇÕES CRÍTICAS:
 
-1. ANALISE os trechos normativos acima. Eles contêm informações sobre a pergunta.
+1. Os trechos normativos acima FORAM ENCONTRADOS como relevantes para a pergunta. Eles CONTÊM informações sobre o tema.
 
-2. SE encontrar informação relevante nos trechos:
-   - Responda a pergunta usando as informações dos trechos
-   - SEMPRE cite: "Art. X" ou "Artigo X" da norma mencionada
-   - SEMPRE mencione a norma (ex: "Instrução Normativa X", "Resolução X")
-   - SEMPRE mencione o ano
-   - Formato: "Conforme Art. X da Instrução Normativa Y/Ano, [resposta]"
+2. SUA TAREFA: Responder a pergunta usando as informações dos trechos fornecidos.
 
-3. SE NÃO encontrar informação relevante:
-   - Diga: "Não há base normativa explícita nos documentos analisados para responder a esta pergunta."
+3. FORMATO OBRIGATÓRIO DA RESPOSTA:
+   - Comece com: "Conforme Art. X da [Norma] Y/Ano, ..."
+   - OU: "De acordo com o Art. X da [Norma] Y/Ano, ..."
+   - SEMPRE cite o artigo usando "Art. X" ou "Artigo X"
+   - SEMPRE mencione a norma completa (ex: "Instrução Normativa 1/2020")
+   - Use as informações dos trechos para responder
 
-4. NÃO invente informações. Use APENAS o que está nos trechos fornecidos.
+4. IMPORTANTE:
+   - Os trechos acima SÃO RELEVANTES para a pergunta
+   - USE as informações dos trechos para responder
+   - NÃO diga "não há base normativa" se os trechos contêm informações
+   - Extraia e apresente as informações dos trechos
 
-5. Sua resposta DEVE conter pelo menos uma citação no formato "Art. X" ou "Artigo X" se houver informação relevante.
+5. EXEMPLO DE RESPOSTA CORRETA:
+   "Conforme Art. 5 da Instrução Normativa 1/2020, os PSPs têm as seguintes obrigações: [extrair do trecho]..."
 
-EXEMPLO DE RESPOSTA CORRETA:
-"Conforme Art. 5 da Instrução Normativa 1/2020, os PSPs têm a obrigação de implementar sistemas de segurança..."
+6. Sua resposta DEVE:
+   - Conter pelo menos "Art. X" ou "Artigo X"
+   - Mencionar a norma e ano
+   - Usar informações dos trechos fornecidos
 
-IMPORTANTE: Os trechos acima contêm informações normativas. Analise-os cuidadosamente antes de responder.
+ANALISE OS TRECHOS ACIMA E RESPONDA A PERGUNTA USANDO AS INFORMAÇÕES CONTIDAS NELES.
 """
     
     def _call_llm(self, prompt: str) -> str:
