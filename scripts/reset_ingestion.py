@@ -18,13 +18,42 @@ from app.config import get_settings
 
 def reset_ingestion(domain: str):
     """Move arquivos de processed de volta para raw"""
+    # Sempre usar a raiz do projeto como base
+    project_root = Path(__file__).parent.parent
     settings = get_settings()
-    raw_path = Path(settings.data_raw_path) / domain
-    processed_path = Path(settings.data_processed_path) / domain
+    
+    # Construir caminhos a partir da raiz do projeto
+    raw_path = (project_root / settings.data_raw_path / domain).resolve()
+    processed_path = (project_root / settings.data_processed_path / domain).resolve()
+    
+    print(f"\n{'='*60}")
+    print(f"Resetando ingestão para domínio: {domain.upper()}")
+    print(f"{'='*60}")
+    print(f"Diretório raw: {raw_path}")
+    print(f"Diretório processed: {processed_path}")
+    print(f"{'='*60}\n")
     
     if not processed_path.exists():
-        print(f"[ERRO] Diretório {processed_path} não existe")
-        return
+        print(f"[AVISO] Diretório {processed_path} não existe")
+        print(f"[INFO] Verificando se há arquivos em {raw_path}...")
+        
+        # Se processed não existe, verificar se os arquivos já estão em raw
+        if raw_path.exists():
+            files = list(raw_path.glob("*.pdf")) + list(raw_path.glob("*.html")) + list(raw_path.glob("*.htm"))
+            if files:
+                print(f"[INFO] Encontrados {len(files)} arquivo(s) em {raw_path}")
+                print(f"[INFO] Os arquivos já estão em raw, prontos para reingestão!")
+                return
+            else:
+                print(f"[ERRO] Nenhum arquivo encontrado em {raw_path}")
+                print(f"[INFO] Coloque os arquivos PDF/HTML em {raw_path} antes de executar a ingestão")
+                return
+        else:
+            print(f"[ERRO] Diretório {raw_path} também não existe")
+            print(f"[INFO] Criando diretório {raw_path}...")
+            raw_path.mkdir(parents=True, exist_ok=True)
+            print(f"[INFO] Coloque os arquivos PDF/HTML em {raw_path} antes de executar a ingestão")
+            return
     
     # Listar arquivos processados
     files = list(processed_path.glob("*.pdf")) + list(processed_path.glob("*.html")) + list(processed_path.glob("*.htm"))
