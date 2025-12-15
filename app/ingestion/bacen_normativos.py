@@ -119,40 +119,59 @@ def normalize_html(html: str) -> str:
         for revoked in soup.find_all("s"):
             revoked.decompose()
         
-        # Remover tags de formatação desnecessárias, mas preservar estrutura
-        # Remover: span, div, font, style, script
-        for tag in soup.find_all(["span", "div", "font", "style", "script", "noscript"]):
-            # Se a tag contém apenas texto, preservar o texto
-            if tag.string or (tag.get_text(strip=True) and not tag.find_all()):
-                tag.replace_with(tag.get_text())
-            else:
-                tag.decompose()
+        # Remover tags que não contêm conteúdo útil
+        for tag in soup.find_all(["script", "style", "noscript"]):
+            tag.decompose()
         
-        # Preservar estrutura importante: p, br, strong, em, u
+        # Processar tags de formatação: substituir por texto, não remover
+        # Isso preserva o conteúdo dentro de span, div, font, etc.
+        for tag in soup.find_all(["span", "div", "font"]):
+            # Se a tag tem apenas texto (sem filhos), substituir pelo texto
+            if not tag.find_all():
+                text = tag.get_text(strip=True)
+                if text:
+                    tag.replace_with(text)
+                else:
+                    tag.decompose()
+            # Se tem filhos, manter estrutura mas remover atributos
+            else:
+                # Remover apenas atributos, manter conteúdo
+                tag.attrs = {}
+        
         # Converter quebras de linha para \n
         for br in soup.find_all("br"):
             br.replace_with("\n")
         
-        # Normalizar parágrafos
+        # Processar parágrafos: preservar conteúdo
         for p in soup.find_all("p"):
-            text = p.get_text(separator="\n", strip=True)
+            text = p.get_text(separator=" ", strip=True)
             if text:
+                # Adicionar quebra de linha após parágrafo
                 p.replace_with(f"{text}\n")
             else:
                 p.decompose()
         
         # Extrair texto preservando quebras de linha
+        # Usar get_text com separator para preservar estrutura
         text = soup.get_text(separator="\n", strip=True)
+        
+        # Se ainda estiver vazio, tentar método alternativo
+        if not text or len(text.strip()) < 50:
+            logger.warning("Texto extraído muito curto, tentando método alternativo")
+            # Tentar extrair diretamente do body ou html
+            body = soup.find("body") or soup
+            text = body.get_text(separator="\n", strip=True)
         
         # Normalizar múltiplas quebras de linha (máximo 2 consecutivas)
         text = re.sub(r'\n{3,}', '\n\n', text)
         
-        # Normalizar espaços múltiplos (exceto no início de linha para indentação)
+        # Normalizar espaços múltiplos dentro de linhas
         lines = text.split('\n')
         normalized_lines = []
         for line in lines:
             # Preservar espaços iniciais (para indentação de incisos)
             leading_spaces = len(line) - len(line.lstrip())
+            # Normalizar espaços múltiplos no conteúdo
             content = re.sub(r' +', ' ', line.strip())
             if content:
                 normalized_lines.append(' ' * leading_spaces + content)
@@ -164,21 +183,39 @@ def normalize_html(html: str) -> str:
         # Remover linhas vazias excessivas no início e fim
         text = text.strip()
         
+        # Validar que tem conteúdo
+        text_non_whitespace = text.replace('\n', '').replace(' ', '').replace('\t', '').strip()
+        
         logger.debug(
             "HTML normalizado",
             original_length=len(html),
-            normalized_length=len(text)
+            normalized_length=len(text),
+            non_whitespace_length=len(text_non_whitespace)
         )
+        
+        if len(text_non_whitespace) < 50:
+            logger.warning(
+                "Texto normalizado muito curto após processamento",
+                original_length=len(html),
+                normalized_length=len(text),
+                non_whitespace_length=len(text_non_whitespace)
+            )
         
         return text
         
     except Exception as e:
         logger.error("Erro ao normalizar HTML", error=str(e))
-        # Fallback: extrair texto básico
-        soup = BeautifulSoup(html, "lxml")
-        for tag in soup.find_all(["s", "script", "style"]):
-            tag.decompose()
-        return soup.get_text(separator="\n", strip=True)
+        # Fallback: extrair texto básico sem processamento complexo
+        try:
+            soup = BeautifulSoup(html, "lxml")
+            for tag in soup.find_all(["s", "script", "style", "noscript"]):
+                tag.decompose()
+            text = soup.get_text(separator="\n", strip=True)
+            logger.info("Usando fallback de extração de texto", text_length=len(text))
+            return text
+        except Exception as e2:
+            logger.error("Erro no fallback de extração", error=str(e2))
+            return ""
 
 
 def chunk_by_article(text: str) -> List[Tuple[str, str]]:
