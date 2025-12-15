@@ -93,6 +93,16 @@ class JuridicalChunker:
         articles = self.split_by_article(text)
         
         for article_text, article_num in articles:
+            # Validar que o texto não está vazio
+            article_text = article_text.strip() if article_text else ""
+            if not article_text or len(article_text) < 10:
+                logger.warning(
+                    "Artigo com texto vazio ignorado",
+                    article_num=article_num,
+                    text_length=len(article_text) if article_text else 0
+                )
+                continue
+            
             # Verificar se precisa dividir por inciso
             tokens = self.count_tokens(article_text)
             
@@ -111,6 +121,16 @@ class JuridicalChunker:
                 incisos = self.split_article_by_inciso(article_text, article_num or "N/A")
                 
                 for inciso_text, identifier in incisos:
+                    # Validar que o texto não está vazio
+                    inciso_text = inciso_text.strip() if inciso_text else ""
+                    if not inciso_text or len(inciso_text) < 10:
+                        logger.warning(
+                            "Inciso com texto vazio ignorado",
+                            identifier=identifier,
+                            text_length=len(inciso_text) if inciso_text else 0
+                        )
+                        continue
+                    
                     inciso_tokens = self.count_tokens(inciso_text)
                     
                     if inciso_tokens <= self.max_tokens:
@@ -126,6 +146,15 @@ class JuridicalChunker:
                         # Se ainda for muito grande, dividir por parágrafos ou truncar
                         # Por segurança, truncar mantendo início
                         truncated = inciso_text[:self.max_tokens * 4]  # Aproximação
+                        truncated = truncated.strip() if truncated else ""
+                        
+                        if not truncated or len(truncated) < 10:
+                            logger.warning(
+                                "Chunk truncado ficou vazio, ignorando",
+                                identifier=identifier
+                            )
+                            continue
+                        
                         metadata = Metadata(
                             **base_metadata,
                             artigo=identifier
@@ -143,6 +172,18 @@ class JuridicalChunker:
         # Validar chunks
         valid_chunks = []
         for chunk in chunks:
+            # Primeiro validar que o texto não está vazio
+            chunk_text = chunk.text.strip() if chunk.text else ""
+            if not chunk_text or len(chunk_text) < 10:
+                logger.warning(
+                    "Chunk com texto vazio removido na validação",
+                    chunk_id=chunk.chunk_id,
+                    norma=chunk.metadata.norma,
+                    artigo=chunk.metadata.artigo,
+                    text_length=len(chunk_text) if chunk_text else 0
+                )
+                continue
+            
             # Se o chunk tem artigo no metadata, já é uma referência normativa válida
             if chunk.metadata.artigo:
                 valid_chunks.append(chunk)
