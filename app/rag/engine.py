@@ -78,21 +78,29 @@ PERGUNTA: {question}
 
 INSTRUÇÕES OBRIGATÓRIAS:
 
-1. Os trechos acima FORAM ENCONTRADOS como relevantes. Eles CONTÊM informações sobre "{question}".
+1. Os trechos acima FORAM ENCONTRADOS como relevantes para a pergunta "{question}".
+2. Eles CONTÊM informações que respondem à pergunta. ANALISE-OS CUIDADOSAMENTE.
+3. EXTRAIA informações dos trechos e responda a pergunta usando essas informações.
 
-2. SUA RESPOSTA DEVE:
-   - Começar com uma citação explícita: "Conforme Art. X da [Norma] Y/Ano" ou "De acordo com o Art. X da [Norma] Y/Ano"
-   - Usar as informações dos trechos para responder a pergunta
-   - SEMPRE incluir "Art. X" ou "Artigo X" na resposta
-   - SEMPRE incluir o nome completo da norma e o ano
+4. FORMATO OBRIGATÓRIO DA RESPOSTA:
+   - SEMPRE comece com: "Conforme Art. [NÚMERO] da [NORMA] [NÚMERO]/[ANO]"
+   - Use as informações do trecho para responder
+   - Cite o artigo usando "Art. X" ou "Artigo X"
+   - Mencione a norma completa e o ano
 
-3. EXEMPLO DE RESPOSTA CORRETA:
-   "Conforme Art. 5 da Instrução Normativa 1/2020, os PSPs têm as seguintes obrigações: [extrair do trecho acima]"
+5. EXEMPLO DE RESPOSTA CORRETA:
+   "Conforme Art. 5 da Instrução Normativa 1/2020, os PSPs têm a obrigação de implementar sistemas de segurança adequados para operações no Pix, conforme estabelecido no trecho acima."
 
-4. IMPORTANTE: Os trechos acima CONTÊM informações relevantes. Use-os para responder.
+6. IMPORTANTE: 
+   - Os trechos FORAM SELECIONADOS como relevantes
+   - Eles CONTÊM informações sobre a pergunta
+   - USE as informações dos trechos para responder
+   - NÃO diga que não há base normativa sem analisar cuidadosamente todos os trechos primeiro
 
-5. Se realmente não conseguir extrair informação dos trechos, diga:
+7. Se REALMENTE não conseguir extrair informação relevante dos trechos (após analisar todos), diga:
    "Não há base normativa explícita nos documentos analisados para responder a esta pergunta."
+
+Sua resposta DEVE começar com uma citação no formato "Conforme Art. X da [Norma] Y/Ano" se houver qualquer informação relevante nos trechos.
 
 RESPONDA AGORA:
 """
