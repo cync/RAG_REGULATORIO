@@ -254,17 +254,17 @@ class VectorStore:
             query_embedding = self._get_embedding_with_retry(query)
             
             # Buscar usando a API correta do QdrantClient
-            # A API correta é search() mas pode variar por versão
-            # Tentar primeiro com search, se falhar, usar query_points
-            try:
+            # Verificar qual método está disponível
+            if hasattr(self.client, 'search'):
+                # API antiga (qdrant-client < 1.7)
                 results = self.client.search(
                     collection_name=collection_name,
                     query_vector=query_embedding,
                     limit=top_k,
                     score_threshold=min_score
                 )
-            except AttributeError:
-                # Se search não existir, usar query_points (API mais nova)
+            elif hasattr(self.client, 'query_points'):
+                # API nova (qdrant-client >= 1.7)
                 from qdrant_client.models import Query, Vector
                 query_result = self.client.query_points(
                     collection_name=collection_name,
@@ -279,6 +279,9 @@ class VectorStore:
                 )
                 # query_points retorna um objeto com .points
                 results = query_result.points if hasattr(query_result, 'points') else query_result
+            else:
+                # Fallback: usar método direto
+                raise AttributeError("QdrantClient não tem métodos search() ou query_points() disponíveis")
             
             # Converter para DocumentChunk
             chunks = []
