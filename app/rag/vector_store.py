@@ -253,10 +253,12 @@ class VectorStore:
             # Gerar embedding da query usando função com retry unificado
             query_embedding = self._get_embedding_with_retry(query)
             
-            # Buscar
-            results = self.client.search(
+            # Buscar usando a API correta do QdrantClient
+            from qdrant_client.models import Filter, FieldCondition, MatchValue
+            
+            results = self.client.query_points(
                 collection_name=collection_name,
-                query_vector=query_embedding,
+                query=query_embedding,
                 limit=top_k,
                 score_threshold=min_score
             )
