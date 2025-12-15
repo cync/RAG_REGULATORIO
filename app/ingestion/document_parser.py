@@ -7,6 +7,8 @@ import html2text
 from app.models.schemas import Metadata, DocumentChunk
 from app.utils.logger import get_logger
 
+logger = get_logger(__name__)
+
 # OCR imports (opcional)
 try:
     from pdf2image import convert_from_path
@@ -14,10 +16,7 @@ try:
     OCR_AVAILABLE = True
 except ImportError:
     OCR_AVAILABLE = False
-    logger = get_logger(__name__)
     logger.warning("OCR não disponível - instale pytesseract e pdf2image para suporte a PDFs escaneados")
-
-logger = get_logger(__name__)
 
 
 class DocumentParser:
@@ -271,6 +270,7 @@ class DocumentParser:
     def parse(self, file_path: Path, tema: str, url: Optional[str] = None):
         """
         Parse documento e retorna texto + metadados base.
+        Suporta PDF, HTML e JSON (normativos normalizados do Bacen).
         """
         suffix = file_path.suffix.lower()
         
@@ -278,6 +278,10 @@ class DocumentParser:
             text = self.parse_pdf(file_path)
         elif suffix in [".html", ".htm"]:
             text = self.parse_html(file_path)
+        elif suffix == ".json":
+            # Arquivo JSON de normativo normalizado do Bacen
+            text, base_metadata = self.parse_json_normativo(file_path)
+            return text, base_metadata
         else:
             raise ValueError(f"Formato não suportado: {suffix}")
         

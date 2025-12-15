@@ -37,8 +37,13 @@ def ingest_documents(domain: str, force_reindex: bool = False):
     raw_path.mkdir(parents=True, exist_ok=True)
     processed_path.mkdir(parents=True, exist_ok=True)
     
-    # Listar arquivos
-    files = list(raw_path.glob("*.pdf")) + list(raw_path.glob("*.html")) + list(raw_path.glob("*.htm"))
+    # Listar arquivos (incluindo JSON de normativos normalizados)
+    files = (
+        list(raw_path.glob("*.pdf")) + 
+        list(raw_path.glob("*.html")) + 
+        list(raw_path.glob("*.htm")) +
+        list(raw_path.glob("*.json"))  # Arquivos JSON de normativos normalizados
+    )
     
     if not files:
         logger.warning("Nenhum arquivo encontrado", domain=domain, path=str(raw_path))
