@@ -228,7 +228,7 @@ class VectorStore:
         collection_name: str,
         query: str,
         top_k: int = 5,
-        min_score: float = 0.3  # Reduzido de 0.7 para 0.3 para capturar mais resultados
+        min_score: float = 0.15  # Reduzido para 0.15 - scores de similaridade estão em ~0.19
     ) -> List[DocumentChunk]:
         """Busca semântica na coleção"""
         try:

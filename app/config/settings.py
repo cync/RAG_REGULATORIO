@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     
     # RAG Config
     top_k_results: int = 5
-    min_similarity_score: float = 0.7
+    min_similarity_score: float = 0.15  # Reduzido de 0.7 para 0.15 - scores de similaridade estão em ~0.19
     max_tokens_response: int = 1000
     embedding_model: str = "text-embedding-3-large"
     llm_model: str = "gpt-4o-mini"  # GPT-4.1-mini não existe, usando gpt-4o-mini
