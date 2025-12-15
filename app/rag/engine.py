@@ -12,28 +12,20 @@ logger = get_logger(__name__)
 SYSTEM_PROMPT = """Você é um especialista em regulação do Banco Central do Brasil,
 com foco exclusivo em Pix e Open Finance.
 
-Responda apenas com base nos trechos normativos fornecidos.
-Não faça inferências, interpretações jurídicas ou extrapolações.
+IMPORTANTE: Você receberá trechos normativos que FORAM ENCONTRADOS como relevantes para a pergunta.
+Estes trechos CONTÊM informações sobre o tema perguntado.
 
-Se a resposta não estiver explicitamente nos documentos, diga:
-"Não há base normativa explícita nos documentos analisados."
+SUA TAREFA: Responder a pergunta usando as informações dos trechos fornecidos.
 
-REGRAS OBRIGATÓRIAS DE CITAÇÃO:
-- SEMPRE cite o ARTIGO usando o formato: "Art. X" ou "Artigo X"
-- SEMPRE cite a NORMA (ex: "Instrução Normativa X", "Resolução X")
-- SEMPRE cite o ANO
-- Exemplo: "Conforme Art. 5 da Instrução Normativa 1/2020"
+REGRAS OBRIGATÓRIAS:
+1. SEMPRE use as informações dos trechos fornecidos para responder
+2. SEMPRE cite o artigo usando "Art. X" ou "Artigo X" na sua resposta
+3. SEMPRE cite a norma completa (ex: "Instrução Normativa 1/2020" ou "Circular 1/2020")
+4. SEMPRE cite o ano
+5. Use o formato: "Conforme Art. X da [Norma] Y/Ano, ..." ou similar
 
-Formato obrigatório da resposta:
-
-Resposta objetiva:
-[Resposta direta à pergunta, citando Art. X da Norma Y/Ano]
-
-Base normativa:
-Art. X da Norma Y/Ano
-
-Explicação técnica:
-[Detalhamento técnico, sempre citando Art. X]
+Se realmente não conseguir encontrar informação relevante nos trechos, diga:
+"Não há base normativa explícita nos documentos analisados para responder a esta pergunta."
 """
 
 
@@ -78,42 +70,31 @@ class RegulatoryRAGEngine:
     
     def _build_prompt(self, question: str, context: str) -> str:
         """Constrói prompt completo"""
-        return f"""Você é um especialista em regulação do Banco Central do Brasil.
-
-TRECHOS NORMATIVOS FORNECIDOS (ANALISE ESTES TRECHOS):
+        return f"""TRECHOS NORMATIVOS ENCONTRADOS (USE ESTAS INFORMAÇÕES PARA RESPONDER):
 
 {context}
 
-PERGUNTA DO USUÁRIO: {question}
+PERGUNTA: {question}
 
-INSTRUÇÕES CRÍTICAS:
+INSTRUÇÕES OBRIGATÓRIAS:
 
-1. Os trechos normativos acima FORAM ENCONTRADOS como relevantes para a pergunta. Eles CONTÊM informações sobre o tema.
+1. Os trechos acima FORAM ENCONTRADOS como relevantes. Eles CONTÊM informações sobre "{question}".
 
-2. SUA TAREFA: Responder a pergunta usando as informações dos trechos fornecidos.
+2. SUA RESPOSTA DEVE:
+   - Começar com uma citação explícita: "Conforme Art. X da [Norma] Y/Ano" ou "De acordo com o Art. X da [Norma] Y/Ano"
+   - Usar as informações dos trechos para responder a pergunta
+   - SEMPRE incluir "Art. X" ou "Artigo X" na resposta
+   - SEMPRE incluir o nome completo da norma e o ano
 
-3. FORMATO OBRIGATÓRIO DA RESPOSTA:
-   - Comece com: "Conforme Art. X da [Norma] Y/Ano, ..."
-   - OU: "De acordo com o Art. X da [Norma] Y/Ano, ..."
-   - SEMPRE cite o artigo usando "Art. X" ou "Artigo X"
-   - SEMPRE mencione a norma completa (ex: "Instrução Normativa 1/2020")
-   - Use as informações dos trechos para responder
+3. EXEMPLO DE RESPOSTA CORRETA:
+   "Conforme Art. 5 da Instrução Normativa 1/2020, os PSPs têm as seguintes obrigações: [extrair do trecho acima]"
 
-4. IMPORTANTE:
-   - Os trechos acima SÃO RELEVANTES para a pergunta
-   - USE as informações dos trechos para responder
-   - NÃO diga "não há base normativa" se os trechos contêm informações
-   - Extraia e apresente as informações dos trechos
+4. IMPORTANTE: Os trechos acima CONTÊM informações relevantes. Use-os para responder.
 
-5. EXEMPLO DE RESPOSTA CORRETA:
-   "Conforme Art. 5 da Instrução Normativa 1/2020, os PSPs têm as seguintes obrigações: [extrair do trecho]..."
+5. Se realmente não conseguir extrair informação dos trechos, diga:
+   "Não há base normativa explícita nos documentos analisados para responder a esta pergunta."
 
-6. Sua resposta DEVE:
-   - Conter pelo menos "Art. X" ou "Artigo X"
-   - Mencionar a norma e ano
-   - Usar informações dos trechos fornecidos
-
-ANALISE OS TRECHOS ACIMA E RESPONDA A PERGUNTA USANDO AS INFORMAÇÕES CONTIDAS NELES.
+RESPONDA AGORA:
 """
     
     def _call_llm(self, prompt: str) -> str:
