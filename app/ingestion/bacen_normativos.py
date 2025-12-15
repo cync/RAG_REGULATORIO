@@ -489,22 +489,33 @@ def main(normativos: List[Tuple[str, int]], output_base_dir: str = "data/raw"):
             # Inferir tema do primeiro chunk
             chunks_files = list(temp_output.glob("*.json"))
             if chunks_files:
-                with open(chunks_files[0], 'r', encoding='utf-8') as f:
-                    chunk_data = json.load(f)
-                    tema = chunk_data["metadata"].get("tema", "outros")
-                
-                final_output = output_base / tema
-                final_output.mkdir(parents=True, exist_ok=True)
-                
-                # Mover arquivos
-                for chunk_file in chunks_files:
-                    chunk_file.rename(final_output / chunk_file.name)
-                
-                # Limpar diretório temp
                 try:
-                    temp_output.rmdir()
-                except:
-                    pass
+                    with open(chunks_files[0], 'r', encoding='utf-8') as f:
+                        chunk_data = json.load(f)
+                        tema = chunk_data["metadata"].get("tema", "outros")
+                    
+                    final_output = output_base / tema
+                    final_output.mkdir(parents=True, exist_ok=True)
+                    
+                    # Mover arquivos
+                    for chunk_file in chunks_files:
+                        target = final_output / chunk_file.name
+                        if not target.exists():  # Idempotência
+                            chunk_file.rename(target)
+                        else:
+                            chunk_file.unlink()  # Remover duplicado
+                    
+                    # Limpar diretório temp se vazio
+                    try:
+                        if temp_output.exists() and not list(temp_output.iterdir()):
+                            temp_output.rmdir()
+                    except:
+                        pass
+                except Exception as e:
+                    logger.warning(
+                        "Erro ao mover arquivos para diretório final",
+                        error=str(e)
+                    )
         
         results.append(result)
     
