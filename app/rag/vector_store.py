@@ -196,11 +196,23 @@ class VectorStore:
             point_id = str(uuid.uuid4())
             chunk.chunk_id = point_id
             
+            # Validar que o texto não está vazio antes de indexar
+            chunk_text = chunk.text.strip() if chunk.text else ""
+            if not chunk_text or len(chunk_text) < 10:
+                logger.warning(
+                    "Chunk com texto vazio ignorado durante indexação",
+                    chunk_index=i,
+                    text_length=len(chunk_text),
+                    norma=chunk.metadata.norma,
+                    artigo=chunk.metadata.artigo
+                )
+                continue
+            
             point = PointStruct(
                 id=point_id,
                 vector=embedding,
                 payload={
-                    "text": chunk.text,
+                    "text": chunk_text,  # Usar texto validado
                     "fonte": chunk.metadata.fonte,
                     "norma": chunk.metadata.norma,
                     "numero_norma": chunk.metadata.numero_norma,
@@ -211,6 +223,16 @@ class VectorStore:
                 }
             )
             points.append(point)
+            
+            # Log do primeiro chunk para debug
+            if i == 0:
+                logger.debug(
+                    "Exemplo de chunk sendo indexado",
+                    text_length=len(chunk_text),
+                    text_preview=chunk_text[:100],
+                    norma=chunk.metadata.norma,
+                    artigo=chunk.metadata.artigo
+                )
         
         # Inserir em batch
         try:
@@ -321,8 +343,22 @@ class VectorStore:
                     point_id = result.get('id')
                     score = result.get('score', 0.0)
                 
+                # Extrair texto do payload
+                text_from_payload = payload.get("text", "")
+                
+                # Log para debug se texto estiver vazio
+                if not text_from_payload or len(str(text_from_payload).strip()) < 10:
+                    logger.warning(
+                        "Chunk recuperado com texto vazio ou muito curto",
+                        point_id=str(point_id),
+                        text_length=len(str(text_from_payload)) if text_from_payload else 0,
+                        payload_keys=list(payload.keys()) if isinstance(payload, dict) else [],
+                        payload_text_type=type(text_from_payload).__name__,
+                        payload_preview=str(payload)[:200] if payload else "None"
+                    )
+                
                 chunk = DocumentChunk(
-                    text=payload.get("text", ""),
+                    text=str(text_from_payload) if text_from_payload else "",
                     metadata=Metadata(
                         fonte=payload.get("fonte", ""),
                         norma=payload.get("norma", ""),
