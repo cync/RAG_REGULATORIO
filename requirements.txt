@@ -31,3 +31,6 @@ structlog==23.2.0
 # Validação e parsing
 regex==2023.12.25
 
+# Retry e rate limiting
+tenacity==8.2.3
+
