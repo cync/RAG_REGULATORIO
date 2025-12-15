@@ -7,6 +7,16 @@ import html2text
 from app.models.schemas import Metadata, DocumentChunk
 from app.utils.logger import get_logger
 
+# OCR imports (opcional)
+try:
+    from pdf2image import convert_from_path
+    import pytesseract
+    OCR_AVAILABLE = True
+except ImportError:
+    OCR_AVAILABLE = False
+    logger = get_logger(__name__)
+    logger.warning("OCR não disponível - instale pytesseract e pdf2image para suporte a PDFs escaneados")
+
 logger = get_logger(__name__)
 
 
@@ -18,8 +28,74 @@ class DocumentParser:
         self.html_converter.ignore_links = False
         self.html_converter.ignore_images = True
     
+    def parse_pdf_with_ocr(self, file_path: Path) -> str:
+        """Extrai texto de PDF usando OCR (para PDFs escaneados)"""
+        if not OCR_AVAILABLE:
+            logger.error("OCR não disponível - instale pytesseract e pdf2image")
+            return ""
+        
+        try:
+            logger.info("Tentando extrair texto com OCR", file=str(file_path))
+            
+            # Converter PDF para imagens
+            images = convert_from_path(str(file_path), dpi=300)
+            
+            text = ""
+            total_pages = len(images)
+            
+            for page_num, image in enumerate(images, 1):
+                try:
+                    # Extrair texto da imagem usando Tesseract
+                    page_text = pytesseract.image_to_string(image, lang='por')
+                    
+                    if page_text and len(page_text.strip().replace('\n', '').replace(' ', '')) > 10:
+                        text += page_text + "\n"
+                        
+                        if page_num == 1:
+                            logger.debug(
+                                "Primeira página extraída com OCR",
+                                file=str(file_path),
+                                page_text_length=len(page_text),
+                                page_text_preview=page_text[:300] if page_text else ""
+                            )
+                except Exception as e:
+                    logger.warning(
+                        "Erro ao processar página com OCR",
+                        file=str(file_path),
+                        page_num=page_num,
+                        error=str(e)
+                    )
+                    continue
+            
+            text = text.strip()
+            text_non_whitespace = text.replace('\n', '').replace(' ', '').replace('\t', '').strip()
+            
+            if not text or len(text_non_whitespace) < 50:
+                logger.warning(
+                    "OCR extraiu texto vazio ou muito curto",
+                    file=str(file_path),
+                    text_length=len(text),
+                    text_non_whitespace_length=len(text_non_whitespace),
+                    total_pages=total_pages
+                )
+                return ""
+            
+            logger.info(
+                "PDF extraído com OCR com sucesso",
+                file=str(file_path),
+                text_length=len(text),
+                text_non_whitespace_length=len(text_non_whitespace),
+                total_pages=total_pages
+            )
+            
+            return text
+            
+        except Exception as e:
+            logger.error("Erro ao extrair texto com OCR", file=str(file_path), error=str(e))
+            return ""
+    
     def parse_pdf(self, file_path: Path) -> str:
-        """Extrai texto de PDF preservando estrutura"""
+        """Extrai texto de PDF preservando estrutura. Tenta pypdf primeiro, depois OCR se necessário."""
         try:
             text = ""
             with open(file_path, "rb") as f:
@@ -66,22 +142,48 @@ class DocumentParser:
             # Validar que o texto não está vazio ou só tem whitespace
             text_non_whitespace = text.replace('\n', '').replace(' ', '').replace('\t', '').strip()
             
+            # Se pypdf não extraiu texto suficiente, tentar OCR
             if not text or len(text_non_whitespace) < 50:
-                logger.error(
-                    "PDF extraído com texto vazio ou muito curto (apenas whitespace)",
+                logger.warning(
+                    "pypdf extraiu texto vazio, tentando OCR",
                     file=str(file_path),
                     text_length=len(text),
                     text_non_whitespace_length=len(text_non_whitespace),
                     total_pages=total_pages,
                     pages_with_text=pages_with_text,
-                    pages_without_text=pages_without_text,
-                    preview=text[:300] if text else ""
+                    pages_without_text=pages_without_text
                 )
-                # Retornar string vazia para que o arquivo seja ignorado
-                return ""
+                
+                # Tentar OCR como fallback
+                if OCR_AVAILABLE:
+                    ocr_text = self.parse_pdf_with_ocr(file_path)
+                    if ocr_text and len(ocr_text.replace('\n', '').replace(' ', '').replace('\t', '').strip()) >= 50:
+                        logger.info(
+                            "OCR conseguiu extrair texto do PDF",
+                            file=str(file_path),
+                            ocr_text_length=len(ocr_text)
+                        )
+                        return ocr_text
+                    else:
+                        logger.error(
+                            "OCR também não conseguiu extrair texto suficiente",
+                            file=str(file_path)
+                        )
+                        return ""
+                else:
+                    logger.error(
+                        "PDF extraído com texto vazio e OCR não disponível",
+                        file=str(file_path),
+                        text_length=len(text),
+                        text_non_whitespace_length=len(text_non_whitespace),
+                        total_pages=total_pages,
+                        pages_with_text=pages_with_text,
+                        pages_without_text=pages_without_text
+                    )
+                    return ""
             
             logger.info(
-                "PDF parseado com sucesso",
+                "PDF parseado com sucesso (pypdf)",
                 file=str(file_path),
                 text_length=len(text),
                 text_non_whitespace_length=len(text_non_whitespace),
@@ -93,6 +195,10 @@ class DocumentParser:
             return text
         except Exception as e:
             logger.error("Erro ao parsear PDF", file=str(file_path), error=str(e))
+            # Se pypdf falhar completamente, tentar OCR
+            if OCR_AVAILABLE:
+                logger.info("Tentando OCR após erro no pypdf", file=str(file_path))
+                return self.parse_pdf_with_ocr(file_path)
             raise
     
     def parse_html(self, file_path: Path) -> str:
