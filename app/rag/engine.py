@@ -45,26 +45,53 @@ class RegulatoryRAGEngine:
         context_parts = []
         
         for i, chunk in enumerate(chunks, 1):
-            # Construir referência normativa completa
-            norma_ref = f"{chunk.metadata.norma} {chunk.metadata.numero_norma}/{chunk.metadata.ano}"
-            artigo_ref = f"Art. {chunk.metadata.artigo}" if chunk.metadata.artigo else "Sem artigo específico"
+            # Verificar se o texto do chunk não está vazio
+            chunk_text = chunk.text.strip() if chunk.text else ""
             
-            context_parts.append(
-                f"[Documento {i}]\n"
-                f"Referência Normativa: {norma_ref}, {artigo_ref}\n"
-                f"Tema: {chunk.metadata.tema}\n"
-                f"Conteúdo:\n{chunk.text}\n"
-            )
+            # Se o texto estiver vazio ou muito curto, pular este chunk
+            if not chunk_text or len(chunk_text) < 10:
+                logger.warning(
+                    "Chunk com texto vazio ou muito curto ignorado",
+                    chunk_index=i,
+                    text_length=len(chunk_text) if chunk_text else 0
+                )
+                continue
+            
+            # Construir referência normativa - melhorar quando metadados estão incompletos
+            norma_name = chunk.metadata.norma if chunk.metadata.norma and chunk.metadata.norma != "Norma" else "Documento normativo"
+            numero_norma = chunk.metadata.numero_norma if chunk.metadata.numero_norma and chunk.metadata.numero_norma != "N/A" else ""
+            ano = chunk.metadata.ano
+            
+            # Construir referência completa
+            if numero_norma:
+                norma_ref = f"{norma_name} {numero_norma}/{ano}"
+            else:
+                norma_ref = f"{norma_name} ({ano})" if ano else norma_name
+            
+            # Artigo
+            artigo_ref = f"Art. {chunk.metadata.artigo}" if chunk.metadata.artigo else ""
+            
+            # Construir contexto do documento
+            doc_context = f"[Documento {i}]\n"
+            
+            if norma_ref:
+                doc_context += f"Referência: {norma_ref}"
+                if artigo_ref:
+                    doc_context += f", {artigo_ref}"
+                doc_context += "\n"
+            
+            if chunk.metadata.tema:
+                doc_context += f"Tema: {chunk.metadata.tema}\n"
+            
+            doc_context += f"\nConteúdo:\n{chunk_text}\n"
+            
+            context_parts.append(doc_context)
+        
+        if not context_parts:
+            logger.warning("Nenhum chunk válido com conteúdo para construir contexto")
+            return ""
         
         context_str = "\n---\n\n".join(context_parts)
-        
-        # Log do contexto para debug (primeiros 500 chars)
-        logger.debug(
-            "Contexto construído para LLM",
-            context_length=len(context_str),
-            chunks_count=len(chunks),
-            context_preview=context_str[:500]
-        )
         
         return context_str
     
