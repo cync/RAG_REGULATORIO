@@ -5,15 +5,13 @@ import { useState } from 'react'
 interface ChatResponse {
   answer: string
   sources: Array<{
-    text: string
-    metadata: {
-      norma: string
-      numero_norma: string
-      artigo: string
-      ano: number
-      tema: string
-    }
-    score: number
+    fonte: string
+    norma: string
+    numero_norma: string
+    artigo: string | null
+    ano: number
+    tema: string
+    url: string | null
   }>
   citations: string[]
   has_sufficient_context: boolean
@@ -157,11 +155,11 @@ export default function Home() {
                   {response.sources.map((source, idx) => (
                     <div key={idx} className="bg-gray-50 rounded p-3 text-sm">
                       <p className="font-medium text-gray-900">
-                        {source.metadata.norma} {source.metadata.numero_norma}/{source.metadata.ano}
-                        {source.metadata.artigo && ` - ${source.metadata.artigo}`}
+                        {source.norma} {source.numero_norma}/{source.ano}
+                        {source.artigo && ` - Art. ${source.artigo}`}
                       </p>
                       <p className="text-gray-600 text-xs mt-1">
-                        Relevância: {(source.score * 100).toFixed(1)}%
+                        Fonte: {source.fonte} | Tema: {source.tema}
                       </p>
                     </div>
                   ))}
