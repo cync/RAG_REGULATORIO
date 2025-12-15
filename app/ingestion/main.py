@@ -76,15 +76,22 @@ def ingest_documents(domain: str, force_reindex: bool = False):
                 progress=f"{i}/{len(files)}"
             )
             
-            # Indexar (pode demorar devido a rate limits)
-            vector_store.index_chunks(domain, chunks)
-            
-            total_chunks += len(chunks)
-            
-            # Mover para processados
-            processed_file = processed_path / file_path.name
-            if not processed_file.exists():
-                file_path.rename(processed_file)
+            # Só indexar e mover se tiver chunks válidos
+            if chunks:
+                # Indexar (pode demorar devido a rate limits)
+                vector_store.index_chunks(domain, chunks)
+                
+                total_chunks += len(chunks)
+                
+                # Mover para processados apenas se indexou com sucesso
+                processed_file = processed_path / file_path.name
+                if not processed_file.exists():
+                    file_path.rename(processed_file)
+            else:
+                logger.warning(
+                    "Arquivo processado mas sem chunks válidos - não será movido",
+                    file=str(file_path)
+                )
             
             logger.info(
                 "Arquivo processado com sucesso",
