@@ -277,7 +277,24 @@ class VectorStore:
                 )
             
             # query_points retorna um objeto QueryResponse com .points
-            results = query_result.points if hasattr(query_result, 'points') else []
+            all_points = query_result.points if hasattr(query_result, 'points') else []
+            
+            # Filtrar por score_threshold manualmente
+            results = []
+            for point in all_points:
+                score = point.score if hasattr(point, 'score') else 0.0
+                if score >= min_score:
+                    results.append(point)
+            
+            logger.info(
+                "Busca realizada",
+                collection=collection_name,
+                query_length=len(query),
+                total_points=len(all_points),
+                filtered_results=len(results),
+                min_score=min_score,
+                scores=[p.score for p in all_points[:5]] if all_points and hasattr(all_points[0], 'score') else []
+            )
             
             # Converter para DocumentChunk
             chunks = []
