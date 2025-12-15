@@ -181,6 +181,19 @@ RESPONDA AGORA:
         context = self._build_context(sources)
         prompt = self._build_prompt(question, context)
         
+        # Log detalhado para debug
+        logger.info(
+            "Contexto construído para LLM",
+            context_length=len(context),
+            context_preview=context[:500],
+            sources_count=len(sources),
+            sources_preview=[{
+                "norma": s.metadata.norma,
+                "artigo": s.metadata.artigo,
+                "text_preview": s.text[:200] if s.text else ""
+            } for s in sources[:3]]
+        )
+        
         # 4. Chamar LLM
         answer = self._call_llm(prompt)
         
