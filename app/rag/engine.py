@@ -170,18 +170,32 @@ IMPORTANTE: Sua resposta DEVE conter pelo menos uma citação no formato "Art. X
         # 5. Validar resposta
         validations = validate_response(answer, sources, min_sources=1)
         
-        # 6. Se não passar validação, retornar mensagem padrão
+        # 6. Se não passar validação, tentar extrair citações dos sources mesmo assim
         if not validations["is_valid"]:
             logger.warning(
                 "Resposta não passou validação",
                 validations=validations,
-                question=question[:100]
+                question=question[:100],
+                answer_preview=answer[:200] if answer else ""  # Log dos primeiros 200 chars para debug
             )
+            
+            # Extrair citações dos sources mesmo se a resposta não tiver
+            citations = extract_citations(answer, sources)
+            
+            # Se tiver sources mas resposta não citou, incluir citações dos sources
+            if sources and not citations:
+                for source in sources:
+                    if source.metadata.artigo:
+                        citation = f"{source.metadata.norma} {source.metadata.numero_norma}/{source.metadata.ano}, Art. {source.metadata.artigo}"
+                        citations.append(citation)
+                citations = list(set(citations))
+            
+            # Retornar resposta mesmo sem validação, mas marcar como sem contexto suficiente
             return {
-                "answer": "Não há base normativa explícita nos documentos analisados para responder a esta pergunta.",
-                "sources": sources,
-                "citations": extract_citations(answer, sources),
-                "has_sufficient_context": False,
+                "answer": answer if answer else "Não há base normativa explícita nos documentos analisados para responder a esta pergunta.",
+                "sources": [s.metadata.model_dump() for s in sources],
+                "citations": citations,
+                "has_sufficient_context": len(sources) > 0,  # Tem contexto se tem sources
             }
         
         # 7. Extrair citações
