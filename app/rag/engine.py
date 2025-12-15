@@ -198,29 +198,32 @@ ANALISE OS TRECHOS ACIMA E RESPONDA A PERGUNTA USANDO AS INFORMAÇÕES CONTIDAS 
         # 5. Validar resposta
         validations = validate_response(answer, sources, min_sources=1)
         
-        # 6. Se não passar validação, tentar extrair citações dos sources mesmo assim
+        # 6. Extrair citações dos sources (sempre, mesmo se resposta não citar)
+        citations = extract_citations(answer, sources)
+        
+        # Se tiver sources mas resposta não citou, incluir citações dos sources
+        if sources and not citations:
+            for source in sources:
+                if source.metadata.artigo:
+                    citation = f"{source.metadata.norma} {source.metadata.numero_norma}/{source.metadata.ano}, Art. {source.metadata.artigo}"
+                    citations.append(citation)
+            citations = list(set(citations))
+        
+        # Converter sources para dict para compatibilidade com ChatResponse
+        sources_dict = [s.metadata.model_dump() for s in sources]
+        
+        # 7. Se não passar validação, retornar resposta mas com aviso
         if not validations["is_valid"]:
             logger.warning(
                 "Resposta não passou validação",
                 validations=validations,
                 question=question[:100],
-                answer_preview=answer[:200] if answer else ""  # Log dos primeiros 200 chars para debug
+                answer_preview=answer[:200] if answer else "",  # Log dos primeiros 200 chars para debug
+                sources_count=len(sources),
+                citations_count=len(citations)
             )
             
-            # Extrair citações dos sources mesmo se a resposta não tiver
-            citations = extract_citations(answer, sources)
-            
-            # Se tiver sources mas resposta não citou, incluir citações dos sources
-            if sources and not citations:
-                for source in sources:
-                    if source.metadata.artigo:
-                        citation = f"{source.metadata.norma} {source.metadata.numero_norma}/{source.metadata.ano}, Art. {source.metadata.artigo}"
-                        citations.append(citation)
-                citations = list(set(citations))
-            
-            # Retornar resposta mesmo sem validação, mas marcar como sem contexto suficiente
-            # Converter sources para dict para compatibilidade com ChatResponse
-            sources_dict = [s.metadata.model_dump() for s in sources]
+            # Retornar resposta mesmo sem validação, mas incluir citações dos sources
             return {
                 "answer": answer if answer else "Não há base normativa explícita nos documentos analisados para responder a esta pergunta.",
                 "sources": sources_dict,
