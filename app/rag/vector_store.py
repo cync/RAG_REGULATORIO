@@ -254,16 +254,27 @@ class VectorStore:
             query_embedding = self._get_embedding_with_retry(query)
             
             # Buscar usando query_points() - método atual do qdrant-client >= 1.7
+            # Verificar dimensão do embedding
+            embedding_dim = len(query_embedding)
+            logger.debug(
+                "Gerando query de busca",
+                collection=collection_name,
+                embedding_dim=embedding_dim,
+                query_length=len(query)
+            )
+            
             # Para coleções simples (sem named vectors), usar lista diretamente
             try:
                 # Tentar primeiro com lista direta (mais simples)
+                # Remover score_threshold para ver todos os resultados
                 query_result = self.client.query_points(
                     collection_name=collection_name,
                     query=query_embedding,  # Lista de floats diretamente
-                    limit=top_k,
-                    score_threshold=min_score
+                    limit=top_k
+                    # score_threshold removido para debug
                 )
-            except (TypeError, ValueError):
+            except (TypeError, ValueError) as e:
+                logger.warning("Erro ao buscar com lista direta, tentando NamedVector", error=str(e))
                 # Se não funcionar, tentar com NamedVector
                 from qdrant_client.models import NamedVector
                 query_result = self.client.query_points(
@@ -272,8 +283,8 @@ class VectorStore:
                         name="",  # Nome vazio para vetor padrão
                         vector=query_embedding
                     ),
-                    limit=top_k,
-                    score_threshold=min_score
+                    limit=top_k
+                    # score_threshold removido para debug
                 )
             
             # query_points retorna um objeto QueryResponse com .points
