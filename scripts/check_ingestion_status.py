@@ -5,6 +5,11 @@ import sys
 import os
 from pathlib import Path
 
+# Configurar encoding para Windows
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+
 # Adicionar raiz do projeto ao path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
@@ -31,25 +36,25 @@ def check_collection_status(domain: str):
                 print(f"\n{'='*60}")
                 print(f"Coleção: {domain.upper()}")
                 print(f"{'='*60}")
-                print(f"✅ Coleção existe")
-                print(f"📊 Chunks indexados: {points}")
-                print(f"📊 Vetores: {vectors}")
+                print(f"[OK] Colecao existe")
+                print(f"[INFO] Chunks indexados: {points}")
+                print(f"[INFO] Vetores: {vectors}")
                 
                 if points > 0:
-                    print(f"✅ Coleção populada e pronta para uso!")
+                    print(f"[OK] Colecao populada e pronta para uso!")
                 else:
-                    print(f"⚠️  Coleção vazia - execute a ingestão primeiro")
+                    print(f"[AVISO] Colecao vazia - execute a ingestao primeiro")
                 
                 return points > 0
             else:
-                print(f"❌ Não foi possível obter informações da coleção")
+                print(f"[ERRO] Nao foi possivel obter informacoes da colecao")
                 return False
         except Exception as e:
-            print(f"❌ Coleção '{domain}' não existe ou erro ao acessar: {e}")
+            print(f"[ERRO] Colecao '{domain}' nao existe ou erro ao acessar: {e}")
             return False
             
     except Exception as e:
-        print(f"❌ Erro ao conectar com Qdrant: {e}")
+        print(f"[ERRO] Erro ao conectar com Qdrant: {e}")
         print(f"\nVerifique:")
         print(f"  - QDRANT_HOST está correto?")
         print(f"  - QDRANT_API_KEY está configurada? (se usar Qdrant Cloud)")
@@ -63,14 +68,14 @@ def check_raw_files():
     raw_path = Path(settings.data_raw_path)
     
     if not raw_path.exists():
-        print(f"\n⚠️  Diretório {raw_path} não existe")
+        print(f"\n[AVISO] Diretorio {raw_path} nao existe")
         return []
     
     files = list(raw_path.glob("*.pdf")) + list(raw_path.glob("*.html"))
     print(f"\n{'='*60}")
     print(f"Arquivos em {raw_path}")
     print(f"{'='*60}")
-    print(f"📁 Total: {len(files)} arquivos")
+    print(f"[INFO] Total: {len(files)} arquivos")
     
     if files:
         for f in files[:10]:  # Mostrar primeiros 10
@@ -78,7 +83,7 @@ def check_raw_files():
         if len(files) > 10:
             print(f"  ... e mais {len(files) - 10} arquivos")
     else:
-        print("  ⚠️  Nenhum arquivo encontrado")
+        print("  [AVISO] Nenhum arquivo encontrado")
     
     return files
 
@@ -95,11 +100,11 @@ def check_processed_files():
     print(f"\n{'='*60}")
     print(f"Arquivos processados em {processed_path}")
     print(f"{'='*60}")
-    print(f"✅ Total processados: {len(files)} arquivos")
+    print(f"[OK] Total processados: {len(files)} arquivos")
     
     if files:
         for f in files[:10]:  # Mostrar primeiros 10
-            print(f"  ✓ {f.name}")
+            print(f"  [OK] {f.name}")
         if len(files) > 10:
             print(f"  ... e mais {len(files) - 10} arquivos")
     
@@ -109,7 +114,7 @@ def check_processed_files():
 def main():
     """Função principal"""
     print("\n" + "="*60)
-    print("🔍 VERIFICAÇÃO DE STATUS DA INGESTÃO")
+    print("VERIFICACAO DE STATUS DA INGESTAO")
     print("="*60)
     
     # Verificar arquivos
@@ -132,23 +137,23 @@ def main():
     
     # Resumo
     print(f"\n{'='*60}")
-    print("📋 RESUMO")
+    print("RESUMO")
     print("="*60)
     print(f"Arquivos brutos: {len(raw_files)}")
     print(f"Arquivos processados: {len(processed_files)}")
     
     if all_ready and len(processed_files) > 0:
-        print(f"\n✅ Sistema pronto para uso!")
-        print(f"   Todas as coleções estão populadas.")
+        print(f"\n[OK] Sistema pronto para uso!")
+        print(f"   Todas as colecoes estao populadas.")
     elif len(processed_files) > 0:
-        print(f"\n⚠️  Algumas coleções ainda estão vazias.")
-        print(f"   Execute a ingestão para os domínios faltantes.")
+        print(f"\n[AVISO] Algumas colecoes ainda estao vazias.")
+        print(f"   Execute a ingestao para os dominios faltantes.")
     elif len(raw_files) > 0:
-        print(f"\n⏳ Ingestão em andamento ou não iniciada.")
-        print(f"   Aguarde a conclusão ou execute:")
+        print(f"\n[AGUARDANDO] Ingestao em andamento ou nao iniciada.")
+        print(f"   Aguarde a conclusao ou execute:")
         print(f"   python -m app.ingestion.main <domain>")
     else:
-        print(f"\n❌ Nenhum arquivo encontrado para processar.")
+        print(f"\n[ERRO] Nenhum arquivo encontrado para processar.")
         print(f"   Baixe os documentos primeiro em {settings.data_raw_path}")
     
     print()
