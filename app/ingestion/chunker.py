@@ -143,22 +143,47 @@ class JuridicalChunker:
         # Validar chunks
         valid_chunks = []
         for chunk in chunks:
-            # Verificar se contém referência normativa
-            if self._has_normative_reference(chunk.text):
+            # Se o chunk tem artigo no metadata, já é uma referência normativa válida
+            if chunk.metadata.artigo:
+                valid_chunks.append(chunk)
+            # Se não tem artigo mas contém referência normativa no texto, também é válido
+            elif self._has_normative_reference(chunk.text):
+                valid_chunks.append(chunk)
+            # Se não tem artigo nem referência, mas tem norma/numero_norma, aceitar (pode ser introdução/preâmbulo)
+            elif chunk.metadata.norma or chunk.metadata.numero_norma:
+                logger.debug(
+                    "Chunk aceito sem artigo explícito (pode ser preâmbulo/introdução)",
+                    norma=chunk.metadata.norma,
+                    numero_norma=chunk.metadata.numero_norma
+                )
                 valid_chunks.append(chunk)
             else:
-                logger.warning("Chunk sem referência normativa removido", chunk_id=chunk.chunk_id)
+                logger.warning(
+                    "Chunk sem referência normativa removido",
+                    chunk_id=chunk.chunk_id,
+                    norma=chunk.metadata.norma,
+                    artigo=chunk.metadata.artigo
+                )
         
         logger.info("Chunking concluído", total_chunks=len(valid_chunks))
         return valid_chunks
     
     def _has_normative_reference(self, text: str) -> bool:
         """Verifica se texto contém referência normativa"""
+        # Padrões mais flexíveis para documentos normativos
         patterns = [
-            r'\b(artigo|art\.?)\s+\d+',
-            r'\b(inciso|inc\.?)\s+[IVX]+',
-            r'\b(parágrafo|par\.?)\s+\d+',
-            r'\b(resolução|circular|comunicado)',
+            r'(?i)\b(artigo|art\.?)\s+\d+',  # Artigo
+            r'(?i)\b(inciso|inc\.?)\s+[IVX]+',  # Inciso
+            r'(?i)\b(parágrafo|par\.?)\s+\d+',  # Parágrafo
+            r'(?i)\b(resolução|circular|comunicado|instrução)',  # Tipos de norma
+            r'(?i)\b(norma|normativo|regulamenta)',  # Termos normativos
+            r'(?i)\b(bacen|banco\s+central)',  # Referência ao Bacen
+            r'(?i)\b(pix|open\s+finance)',  # Temas específicos
+            r'(?i)\b(obrigação|dever|proibição|permissão)',  # Termos jurídicos
         ]
-        return any(re.search(pattern, text, re.IGNORECASE) for pattern in patterns)
+        text_lower = text.lower()
+        # Verificar se tem pelo menos 50 caracteres e algum padrão
+        if len(text.strip()) < 50:
+            return False
+        return any(re.search(pattern, text_lower) for pattern in patterns)
 
