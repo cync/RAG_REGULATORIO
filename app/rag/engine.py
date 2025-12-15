@@ -210,9 +210,12 @@ IMPORTANTE: Sua resposta DEVE conter pelo menos uma citação no formato "Art. X
             has_citations=len(citations) > 0
         )
         
+        # Converter sources para dict para compatibilidade com ChatResponse
+        sources_dict = [s.metadata.model_dump() for s in sources]
+        
         return {
             "answer": answer,
-            "sources": sources,
+            "sources": sources_dict,
             "citations": citations,
             "has_sufficient_context": True,
         }
