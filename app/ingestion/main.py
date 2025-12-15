@@ -78,15 +78,33 @@ def ingest_documents(domain: str, force_reindex: bool = False):
             
             # Só indexar e mover se tiver chunks válidos
             if chunks:
-                # Indexar (pode demorar devido a rate limits)
-                vector_store.index_chunks(domain, chunks)
-                
-                total_chunks += len(chunks)
-                
-                # Mover para processados apenas se indexou com sucesso
-                processed_file = processed_path / file_path.name
-                if not processed_file.exists():
-                    file_path.rename(processed_file)
+                try:
+                    # Indexar (pode demorar devido a rate limits)
+                    vector_store.index_chunks(domain, chunks)
+                    
+                    total_chunks += len(chunks)
+                    
+                    # Mover para processados apenas se indexou com sucesso
+                    processed_file = processed_path / file_path.name
+                    if not processed_file.exists():
+                        file_path.rename(processed_file)
+                except Exception as index_error:
+                    # Se erro de quota/rate limit, não mover arquivo para permitir retry
+                    error_msg = str(index_error)
+                    if "quota" in error_msg.lower() or "insufficient_quota" in error_msg.lower():
+                        logger.error(
+                            "Erro de quota da OpenAI - arquivo não será movido para permitir retry",
+                            file=str(file_path),
+                            error=error_msg
+                        )
+                        # Não mover arquivo, permitir reprocessar quando quota for restaurada
+                    else:
+                        # Outros erros, logar mas continuar
+                        logger.error(
+                            "Erro ao indexar chunks - arquivo não será movido",
+                            file=str(file_path),
+                            error=error_msg
+                        )
             else:
                 logger.warning(
                     "Arquivo processado mas sem chunks válidos - não será movido",
