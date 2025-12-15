@@ -45,10 +45,17 @@ export default function Home() {
       })
 
       if (!res.ok) {
-        throw new Error(`Erro: ${res.statusText}`)
+        const errorText = await res.text()
+        throw new Error(`Erro ${res.status}: ${errorText || res.statusText}`)
       }
 
       const data = await res.json()
+      
+      // Validar estrutura da resposta
+      if (!data.answer) {
+        throw new Error('Resposta inválida do servidor')
+      }
+      
       setResponse(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao processar consulta')
