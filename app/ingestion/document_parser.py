@@ -217,6 +217,50 @@ class DocumentParser:
             logger.error("Erro ao parsear HTML", file=str(file_path), error=str(e))
             raise
     
+    def parse_json_normativo(self, file_path: Path) -> tuple[str, Dict]:
+        """
+        Parse arquivo JSON de normativo normalizado do Bacen.
+        
+        Args:
+            file_path: Caminho do arquivo JSON
+        
+        Returns:
+            tuple: (texto, metadados)
+        """
+        try:
+            import json
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            text = data.get("text", "")
+            metadata = data.get("metadata", {})
+            
+            # Construir base_metadata no formato esperado
+            base_metadata = {
+                "fonte": metadata.get("fonte", file_path.name),
+                "tema": metadata.get("tema", "pix"),
+                "norma": metadata.get("tipo", "Normativo"),
+                "numero_norma": metadata.get("numero", ""),
+                "ano": metadata.get("ano", 2023),
+                "url": metadata.get("url"),
+            }
+            
+            # Artigo já está no metadata, será usado pelo chunker
+            
+            logger.info(
+                "JSON normativo parseado",
+                file=str(file_path),
+                norma=base_metadata["norma"],
+                numero=base_metadata["numero_norma"],
+                artigo=metadata.get("artigo")
+            )
+            
+            return text, base_metadata
+            
+        except Exception as e:
+            logger.error("Erro ao parsear JSON normativo", file=str(file_path), error=str(e))
+            raise
+    
     def extract_metadata_from_filename(self, filename: str) -> Dict[str, Optional[str]]:
         """
         Extrai metadados básicos do nome do arquivo.
