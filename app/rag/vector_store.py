@@ -7,6 +7,7 @@ from app.models.schemas import DocumentChunk, Metadata
 from app.config import get_settings
 from app.utils.logger import get_logger
 from openai import OpenAI, RateLimitError
+import tenacity
 
 logger = get_logger(__name__)
 
@@ -134,6 +135,21 @@ class VectorStore:
             logger.info("Coleção deletada", collection=collection_name)
         except Exception as e:
             logger.warning("Erro ao deletar coleção (pode não existir)", collection=collection_name, error=str(e))
+    
+    @tenacity.retry(
+        wait=tenacity.wait_exponential(multiplier=1, min=1, max=16),
+        stop=tenacity.stop_after_attempt(5),
+        retry=tenacity.retry_if_exception_type(RateLimitError),
+        before_sleep=tenacity.before_sleep_log(logger, "info"),
+        reraise=True
+    )
+    def _get_embedding_with_retry(self, text: str) -> List[float]:
+        """Tenta obter embedding com retry em caso de RateLimitError."""
+        response = self.openai_client.embeddings.create(
+            model=self.embedding_model,
+            input=text
+        )
+        return response.data[0].embedding
     
     def index_chunks(self, collection_name: str, chunks: List[DocumentChunk]):
         """Indexa chunks na coleção"""
