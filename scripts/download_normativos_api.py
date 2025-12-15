@@ -110,34 +110,62 @@ def is_pix_or_open_finance(title: str, content: str = "") -> bool:
 def download_normativo_content(url: str) -> str:
     """Baixa o conteúdo HTML do normativo"""
     try:
-        response = requests.get(url, timeout=30)
+        # Adicionar headers para parecer um navegador
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        
+        response = requests.get(url, timeout=30, headers=headers)
         response.raise_for_status()
         
-        # Verificar se é HTML
-        content_type = response.headers.get('content-type', '')
-        if 'html' in content_type.lower() or url.endswith('.html'):
-            return response.text
-        else:
-            # Se não for HTML, pode ser uma página que precisa ser parseada
-            # Tentar extrair o conteúdo principal
-            from bs4 import BeautifulSoup
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
-            # Remover scripts e styles
-            for script in soup(["script", "style"]):
-                script.decompose()
-            
-            # Tentar encontrar o conteúdo principal
-            content_div = soup.find('div', class_=re.compile(r'content|normativo|texto', re.I))
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Remover scripts e styles
+        for script in soup(["script", "style", "noscript"]):
+            script.decompose()
+        
+        # O site do Bacen usa Angular, então o conteúdo pode estar em diferentes lugares
+        # Tentar encontrar o conteúdo principal de várias formas
+        
+        # 1. Tentar encontrar div com conteúdo normativo
+        content_selectors = [
+            {'class': re.compile(r'content|normativo|texto|documento', re.I)},
+            {'id': re.compile(r'content|normativo|texto|documento', re.I)},
+            {'class': 'normativo-content'},
+            {'class': 'document-content'},
+        ]
+        
+        for selector in content_selectors:
+            content_div = soup.find('div', selector)
             if content_div:
-                return str(content_div)
+                text = content_div.get_text(separator='\n', strip=True)
+                if len(text) > 200:  # Tem conteúdo suficiente
+                    return f"<div class='normativo-content'>{str(content_div)}</div>"
+        
+        # 2. Tentar encontrar main ou article
+        for tag in ['main', 'article', 'section']:
+            element = soup.find(tag)
+            if element:
+                text = element.get_text(separator='\n', strip=True)
+                if len(text) > 200:
+                    return f"<{tag}>{str(element)}</{tag}>"
+        
+        # 3. Se não encontrar, usar body inteiro mas limpo
+        body = soup.find('body')
+        if body:
+            # Remover elementos vazios ou sem conteúdo
+            for element in body.find_all(['div', 'span', 'p']):
+                text = element.get_text(strip=True)
+                if len(text) < 10:
+                    element.decompose()
             
-            # Se não encontrar, retornar body
-            body = soup.find('body')
-            if body:
+            text = body.get_text(separator='\n', strip=True)
+            if len(text) > 200:
                 return str(body)
-            
-            return response.text
+        
+        # 4. Se ainda não tiver conteúdo, retornar HTML limpo
+        return str(soup)
             
     except Exception as e:
         print(f"⚠️  Erro ao baixar conteúdo de {url}: {e}")
