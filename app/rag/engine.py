@@ -18,18 +18,22 @@ Não faça inferências, interpretações jurídicas ou extrapolações.
 Se a resposta não estiver explicitamente nos documentos, diga:
 "Não há base normativa explícita nos documentos analisados."
 
-Sempre cite:
-- Norma
-- Artigo
-- Ano
+REGRAS OBRIGATÓRIAS DE CITAÇÃO:
+- SEMPRE cite o ARTIGO usando o formato: "Art. X" ou "Artigo X"
+- SEMPRE cite a NORMA (ex: "Instrução Normativa X", "Resolução X")
+- SEMPRE cite o ANO
+- Exemplo: "Conforme Art. 5 da Instrução Normativa 1/2020"
 
 Formato obrigatório da resposta:
 
 Resposta objetiva:
+[Resposta direta à pergunta, citando Art. X da Norma Y/Ano]
 
 Base normativa:
+Art. X da Norma Y/Ano
 
 Explicação técnica:
+[Detalhamento técnico, sempre citando Art. X]
 """
 
 
@@ -69,11 +73,19 @@ Trechos normativos:
 
 Pergunta: {question}
 
-Lembre-se:
-- Responda APENAS com base nos trechos fornecidos
-- Cite sempre a norma, artigo e ano
-- Se não houver base normativa, declare explicitamente
-- Não faça inferências ou interpretações jurídicas
+INSTRUÇÕES OBRIGATÓRIAS:
+1. Responda APENAS com base nos trechos fornecidos acima
+2. SEMPRE cite o ARTIGO usando "Art. X" ou "Artigo X" na sua resposta
+3. SEMPRE cite a NORMA (ex: "Instrução Normativa X", "Resolução X")
+4. SEMPRE cite o ANO
+5. Use o formato: "Conforme Art. X da Norma Y/Ano"
+6. Se não houver base normativa nos trechos, diga explicitamente: "Não há base normativa explícita nos documentos analisados."
+7. Não faça inferências ou interpretações jurídicas
+
+EXEMPLO DE RESPOSTA CORRETA:
+"Conforme Art. 5 da Instrução Normativa 1/2020, os PSPs têm a obrigação de..."
+
+IMPORTANTE: Sua resposta DEVE conter pelo menos uma citação no formato "Art. X" ou "Artigo X" para ser válida.
 """
     
     def _call_llm(self, prompt: str) -> str:
