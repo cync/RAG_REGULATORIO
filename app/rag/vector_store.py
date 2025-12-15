@@ -228,7 +228,7 @@ class VectorStore:
         collection_name: str,
         query: str,
         top_k: int = 5,
-        min_score: float = 0.7
+        min_score: float = 0.3  # Reduzido de 0.7 para 0.3 para capturar mais resultados
     ) -> List[DocumentChunk]:
         """Busca semântica na coleção"""
         try:
@@ -309,13 +309,7 @@ class VectorStore:
                 )
                 chunks.append(chunk)
             
-            logger.info(
-                "Busca realizada",
-                collection=collection_name,
-                query_length=len(query),
-                results=len(chunks),
-                has_results=len(chunks) > 0
-            )
+            # Log já feito acima
             
             return chunks
             
