@@ -253,14 +253,22 @@ class VectorStore:
             # Gerar embedding da query usando função com retry unificado
             query_embedding = self._get_embedding_with_retry(query)
             
-            # Buscar usando a API search() do QdrantClient
-            # A API search() aceita query_vector como lista diretamente
-            results = self.client.search(
+            # Buscar usando query_points() - método atual do qdrant-client >= 1.7
+            from qdrant_client.models import Query, NamedVector
+            
+            # Usar NamedVector para especificar o vetor
+            query_result = self.client.query_points(
                 collection_name=collection_name,
-                query_vector=query_embedding,
+                query=NamedVector(
+                    name="",  # Nome vazio para vetor padrão
+                    vector=query_embedding
+                ),
                 limit=top_k,
                 score_threshold=min_score
             )
+            
+            # query_points retorna um objeto QueryResponse com .points
+            results = query_result.points if hasattr(query_result, 'points') else []
             
             # Converter para DocumentChunk
             chunks = []
