@@ -216,6 +216,24 @@ class VectorStore:
     ) -> List[DocumentChunk]:
         """Busca semântica na coleção"""
         try:
+            # Verificar se a coleção existe e tem documentos
+            try:
+                collection_info = self.client.get_collection(collection_name)
+                if collection_info.points_count == 0:
+                    logger.warning(
+                        "Coleção vazia - nenhum documento indexado",
+                        collection=collection_name,
+                        query=query[:100]
+                    )
+                    return []
+            except Exception as e:
+                logger.warning(
+                    "Erro ao verificar coleção (pode não existir)",
+                    collection=collection_name,
+                    error=str(e)
+                )
+                return []
+            
             # Gerar embedding da query usando função com retry unificado
             query_embedding = self._get_embedding_with_retry(query)
             
@@ -251,7 +269,8 @@ class VectorStore:
                 "Busca realizada",
                 collection=collection_name,
                 query_length=len(query),
-                results=len(chunks)
+                results=len(chunks),
+                has_results=len(chunks) > 0
             )
             
             return chunks
