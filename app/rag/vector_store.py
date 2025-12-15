@@ -253,50 +253,14 @@ class VectorStore:
             # Gerar embedding da query usando função com retry unificado
             query_embedding = self._get_embedding_with_retry(query)
             
-            # Buscar usando a API correta do QdrantClient
-            # Para qdrant-client >= 1.7, usar search() diretamente com named_vector ou query_vector
-            # Verificar qual método está disponível e usar a API correta
-            if hasattr(self.client, 'search'):
-                # API padrão - search() existe
-                try:
-                    results = self.client.search(
-                        collection_name=collection_name,
-                        query_vector=query_embedding,
-                        limit=top_k,
-                        score_threshold=min_score
-                    )
-                except TypeError:
-                    # Se query_vector não funcionar, tentar named_vector
-                    results = self.client.search(
-                        collection_name=collection_name,
-                        query_vector=("", query_embedding),  # (name, vector) tuple
-                        limit=top_k,
-                        score_threshold=min_score
-                    )
-            else:
-                # Se search não existir, usar query_points (API mais nova)
-                from qdrant_client.models import Query, Vector, NamedVector
-                try:
-                    # Tentar com NamedVector
-                    query_result = self.client.query_points(
-                        collection_name=collection_name,
-                        query=NamedVector(
-                            name="",
-                            vector=query_embedding
-                        ),
-                        limit=top_k,
-                        score_threshold=min_score
-                    )
-                except Exception:
-                    # Fallback: usar lista direta
-                    query_result = self.client.query_points(
-                        collection_name=collection_name,
-                        query=query_embedding,
-                        limit=top_k,
-                        score_threshold=min_score
-                    )
-                # query_points retorna um objeto com .points
-                results = query_result.points if hasattr(query_result, 'points') else query_result
+            # Buscar usando a API search() do QdrantClient
+            # A API search() aceita query_vector como lista diretamente
+            results = self.client.search(
+                collection_name=collection_name,
+                query_vector=query_embedding,
+                limit=top_k,
+                score_threshold=min_score
+            )
             
             # Converter para DocumentChunk
             chunks = []
