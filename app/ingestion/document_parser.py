@@ -24,8 +24,39 @@ class DocumentParser:
             text = ""
             with open(file_path, "rb") as f:
                 pdf_reader = pypdf.PdfReader(f)
-                for page in pdf_reader.pages:
-                    text += page.extract_text() + "\n"
+                total_pages = len(pdf_reader.pages)
+                for page_num, page in enumerate(pdf_reader.pages, 1):
+                    page_text = page.extract_text()
+                    text += page_text + "\n"
+                    
+                    # Log da primeira página para debug
+                    if page_num == 1:
+                        logger.debug(
+                            "Primeira página extraída",
+                            file=str(file_path),
+                            page_text_length=len(page_text),
+                            page_text_preview=page_text[:200] if page_text else ""
+                        )
+            
+            text = text.strip()
+            
+            # Validar que o texto não está vazio
+            if not text or len(text) < 50:
+                logger.warning(
+                    "PDF extraído com texto vazio ou muito curto",
+                    file=str(file_path),
+                    text_length=len(text),
+                    total_pages=total_pages,
+                    preview=text[:200] if text else ""
+                )
+            
+            logger.info(
+                "PDF parseado",
+                file=str(file_path),
+                text_length=len(text),
+                total_pages=total_pages
+            )
+            
             return text
         except Exception as e:
             logger.error("Erro ao parsear PDF", file=str(file_path), error=str(e))
