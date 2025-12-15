@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     # Aplicação
     app_env: str = "production"
     log_level: str = "INFO"
-    api_timeout: int = 30
+    api_timeout: int = 60  # Aumentado para dar tempo aos retries de rate limit
     rate_limit_per_minute: int = 60
     
     # RAG Config

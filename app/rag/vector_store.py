@@ -51,13 +51,18 @@ class VectorStore:
                     hostname = rest.split(":")[0]
                     qdrant_url = f"{protocol}://{hostname}"
             
-            # Para Qdrant Cloud, não passar porta explicitamente
+            # Para Qdrant Cloud, garantir URL sem porta
+            # Remover qualquer porta que possa ter sobrado
+            if ":6333" in qdrant_url or ":6334" in qdrant_url:
+                # Remover porta explicitamente
+                qdrant_url = re.sub(r':\d+$', '', qdrant_url.split('://')[1])
+                qdrant_url = f"https://{qdrant_url}"
+            
             qdrant_kwargs = {
                 "url": qdrant_url,
                 "api_key": qdrant_api_key,
                 "timeout": 30,
-                "check_compatibility": False,
-                "prefer_grpc": False  # Usar HTTP para evitar problemas de porta
+                "check_compatibility": False
             }
         else:
             # Qdrant local
@@ -211,33 +216,8 @@ class VectorStore:
     ) -> List[DocumentChunk]:
         """Busca semântica na coleção"""
         try:
-            # Gerar embedding da query usando OpenAI diretamente com retry
-            max_retries = 5
-            retry_delay = 1
-            
-            for attempt in range(max_retries):
-                try:
-                    response = self.openai_client.embeddings.create(
-                        model=self.embedding_model,
-                        input=query
-                    )
-                    query_embedding = response.data[0].embedding
-                    break
-                except RateLimitError as e:
-                    if attempt < max_retries - 1:
-                        wait_time = retry_delay * (2 ** attempt)  # Backoff exponencial
-                        logger.warning(
-                            "Rate limit na busca, aguardando",
-                            attempt=attempt + 1,
-                            wait_seconds=wait_time
-                        )
-                        time.sleep(wait_time)
-                    else:
-                        logger.error("Rate limit após múltiplas tentativas na busca")
-                        raise
-                except Exception as e:
-                    logger.error("Erro ao gerar embedding da query", error=str(e))
-                    raise
+            # Gerar embedding da query usando função com retry unificado
+            query_embedding = self._get_embedding_with_retry(query)
             
             # Buscar
             results = self.client.search(
